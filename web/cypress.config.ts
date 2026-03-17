@@ -24,9 +24,11 @@ export default defineConfig({
   fixturesFolder: 'cypress/fixtures',
   env: {
     grepFilterSpecs: true,
-    'LOGIN_USERNAME': process.env.CYPRESS_LOGIN_USERS!.split(',')[0].split(':')[0],
-    'LOGIN_PASSWORD': process.env.CYPRESS_LOGIN_USERS!.split(',')[0].split(':')[1],
-    'NOO_CS_IMAGE': process.env.MULTISTAGE_PARAM_OVERRIDE_CYPRESS_NOO_CS_IMAGE,
+    ...(process.env.IS_OPENSHIFT === 'true' && {
+      'LOGIN_USERNAME': process.env.CYPRESS_LOGIN_USERS!.split(',')[0].split(':')[0],
+      'LOGIN_PASSWORD': process.env.CYPRESS_LOGIN_USERS!.split(',')[0].split(':')[1],
+      'NOO_CS_IMAGE': process.env.MULTISTAGE_PARAM_OVERRIDE_CYPRESS_NOO_CS_IMAGE,
+    }),
   },
 
   e2e: {
@@ -111,7 +113,7 @@ export default defineConfig({
       );
       return config;
     },
-    specPattern: "cypress/{e2e,integration-tests}/**/*.cy.{js,jsx,ts,tsx}",
+    specPattern: "cypress/{e2e,integration-tests}/**/*{.cy,.spec}.{js,jsx,ts,tsx}",
   },
   numTestsKeptInMemory: 5,
   // required for guidedTour to not pop when running with cypress.
