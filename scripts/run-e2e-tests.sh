@@ -185,8 +185,9 @@ echo "Setting up test credentials..."
 # Check if we should provision htpasswd users
 PROVISION_HTPASSWD="${PROVISION_HTPASSWD:-false}"
 if [ "${OPENSHIFT_CI:-false}" = "true" ]; then
-    echo "Running in OpenShift CI - htpasswd provisioning will be enabled"
-    PROVISION_HTPASSWD="true"
+    # echo "Running in OpenShift CI - htpasswd provisioning will be enabled"
+    # disable htpasswd until https://issues.redhat.com/browse/OCPBUGS-58468 is resolved
+    PROVISION_HTPASSWD="false"
 fi
 
 if [ "${PROVISION_HTPASSWD}" = "true" ]; then
@@ -207,6 +208,9 @@ echo "Test user: $(echo ${CYPRESS_LOGIN_USERS} | cut -d',' -f1 | cut -d':' -f1)"
 
 # Set kubeconfig path for tests
 export CYPRESS_KUBECONFIG_PATH="${KUBECONFIG}"
+
+# Set IS_OPENSHIFT got integration tests
+export IS_OPENSHIFT=true
 
 # Create results directories
 mkdir -p "${RESULTS_DIR}/junit" "${SCREENSHOTS_DIR}/cypress/screenshots" "${SCREENSHOTS_DIR}/cypress/videos"
