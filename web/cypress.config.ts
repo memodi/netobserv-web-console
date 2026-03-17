@@ -32,7 +32,7 @@ export default defineConfig({
   },
 
   e2e: {
-    baseUrl: process.env.CYPRESS_BASE_URL || 'http://localhost:9000',
+    baseUrl: process.env.CYPRESS_BASE_URL || 'http://localhost:9001',
     testIsolation: false,
     experimentalMemoryManagement: true,
     // We've imported your old cypress plugins here.
