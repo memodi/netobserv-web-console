@@ -182,7 +182,7 @@ Cypress.Commands.add('changeMetricType', (name) => {
   cy.showDisplayOptions();
 
   cy.get('#metricType-dropdown').click();
-  cy.get('.pf-v5-c-menu__content').contains(name).click();
+  cy.get(`#${name}`).click();
 
   // For Packets metric, we expect a full page error due to mock timeout
   if (name === 'Packets') {
