@@ -45,7 +45,7 @@ reviews:
       instructions: |
         Check React hooks dependencies, component re-render optimization, and TypeScript type safety. 
         Verify PatternFly component usage follows best practices. 
-        Ensure clickable elements (buttons, links, inputs) have data-test attributes for E2E testing."
+        Ensure clickable elements (buttons, links, inputs) have data-test attributes for E2E testing.
     - path: "web/src/**/*.test.{ts,tsx}"
       instructions: "Ensure proper test isolation, mock cleanup, and coverage of edge cases"
     - path: "pkg/**/*.go"
