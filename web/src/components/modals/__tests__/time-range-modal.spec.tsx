@@ -93,29 +93,34 @@ describe('<TimeRangeModal />', () => {
   });
 
   it('should allow same day with different times (NETOBSERV-2665)', async () => {
-    const wrapper = mount(<TimeRangeModal {...props} />);
-    const datePickers = wrapper.find(DatePicker);
-    const timePickers = wrapper.find(TimePicker);
-
-    // Set both dates to the same day but different times
-    // From: 2026-03-12 10:00:00
-    // To: 2026-03-12 10:30:00
-    const testDate = new Date(2026, 2, 12); // March 12, 2026 in local timezone
-    act(() => {
-      datePickers.at(0).props().onChange!(fakeEvent, '2026-03-12', testDate);
-      timePickers.at(0).props().onChange!(fakeEvent, '10:00:00');
-      datePickers.at(1).props().onChange!(fakeEvent, '2026-03-12', testDate);
-      timePickers.at(1).props().onChange!(fakeEvent, '10:30:00');
+    render(<TimeRangeModal {...props} />);
+    await act(async () => {
+      jest.runAllTimers();
     });
 
-    wrapper.update();
+    const fromDateInput = document.querySelector('[data-test="from-date-picker"] input') as HTMLInputElement;
+    const fromTimeInput = document.querySelector('[data-test="from-time-picker"] input') as HTMLInputElement;
+    const toDateInput = document.querySelector('[data-test="to-date-picker"] input') as HTMLInputElement;
+    const toTimeInput = document.querySelector('[data-test="to-time-picker"] input') as HTMLInputElement;
+    const saveButton = document.querySelector('[data-test="time-range-save"]') as HTMLElement;
 
-    // The save button should be enabled (no error)
-    const saveButton = wrapper.find('[data-test="time-range-save"]').first();
-    expect(saveButton.prop('isDisabled')).toBe(false);
+    await act(async () => {
+      fireEvent.change(fromDateInput, { target: { value: '2026-03-12' } });
+      fireEvent.change(fromTimeInput, { target: { value: '10:00:00' } });
+      fireEvent.change(toDateInput, { target: { value: '2026-03-12' } });
+      fireEvent.change(toTimeInput, { target: { value: '10:30:00' } });
+      jest.runAllTimers();
+    });
 
-    // Verify no validation error is shown
-    const tooltip = wrapper.find('.time-range-tooltip-empty');
-    expect(tooltip.length).toBeGreaterThan(0);
+    await act(async () => {
+      fireEvent.click(saveButton);
+      jest.runAllTimers();
+    });
+
+    const expectedRange: TimeRange = {
+      from: new Date(2026, 2, 12, 10, 0, 0, 0).getTime() / 1000,
+      to: new Date(2026, 2, 12, 10, 30, 0, 0).getTime() / 1000
+    };
+    expect(props.setRange).toHaveBeenCalledWith(expectedRange);
   });
 });
