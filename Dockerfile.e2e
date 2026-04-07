@@ -32,7 +32,7 @@ WORKDIR /opt/app-root/web
 COPY web/package.json web/package-lock.json ./
 
 # Install npm dependencies
-RUN npm ci
+RUN npm --legacy-peer-deps ci
 
 # Copy the rest of the web application
 COPY web/ ./
