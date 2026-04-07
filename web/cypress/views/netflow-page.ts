@@ -54,7 +54,6 @@ export const netflowPage = {
             if ($btn.text() != "Refresh off") {
                 cy.wrap($btn).click({ force: true })
                 cy.get('[data-test="OFF_KEY"]').should('exist').click({ force: true })
-                cy.wrap($btn).click({ force: true })
             }
         })
     },
