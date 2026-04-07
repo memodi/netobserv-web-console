@@ -10,7 +10,7 @@ WORKDIR /opt/app-root
 COPY --chown=node web/package.json web/package.json
 COPY --chown=node web/package-lock.json web/package-lock.json
 WORKDIR /opt/app-root/web
-RUN npm ci
+RUN npm --legacy-peer-deps ci
 
 WORKDIR /opt/app-root
 COPY --chown=node web web
