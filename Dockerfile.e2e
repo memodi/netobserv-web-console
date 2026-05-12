@@ -48,7 +48,9 @@ ENV HOME=/tmp
 ENV NO_COLOR=1
 ENV WEB_DIR=/opt/app-root/web
 
-RUN chmod -R 777 /root/.cache/Cypress /tmp
+RUN mkdir -p /root/.cache/Cypress /tmp && \
+    chmod 1777 /tmp && \
+    chmod -R g+rwX /root/.cache/Cypress
 
 # Make directories writable for OpenShift arbitrary UIDs (group 0)
 RUN chmod -R g+rwX /opt/app-root
