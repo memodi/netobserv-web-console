@@ -237,18 +237,13 @@ BROWSER="${CYPRESS_BROWSER:-chrome}"
 
 # Build cypress run command arguments
 CYPRESS_ARGS=(
-    --spec "cypress/integration-tests/**/*.cy.ts"
+    --spec "${SPEC_FILES:-cypress/integration-tests/**/*.cy.ts}"
     --env "grepTags=${GREP_TAGS}"
     --browser "${BROWSER}"
     --headless
     --reporter cypress-multi-reporters
     --reporter-options configFile=reporter-config.json
 )
-
-# Add --spec option if spec files are provided
-if [ -n "${SPEC_FILES}" ]; then
-    CYPRESS_ARGS+=(--spec "${SPEC_FILES}")
-fi
 
 # Run tests and capture exit code
 set +e
