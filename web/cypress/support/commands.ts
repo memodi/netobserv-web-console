@@ -38,8 +38,8 @@
 //   }
 // }
 
-import * as c from './const';
 import { guidedTour } from '@views/tour';
+import * as c from './const';
 
 Cypress.Commands.add('openNetflowTrafficPage', (clearCache = true) => {
   if (clearCache) {
@@ -229,20 +229,20 @@ const kubeconfig = Cypress.env('KUBECONFIG_PATH');
 const DEFAULT_RETRY_OPTIONS = { retries: 3, interval: 10000 };
 
 Cypress.Commands.add("switchPerspective", (perspective: string) => {
-    cy.get('body').then(($body) => {
-        if ($body.find('.pf-m-collapsed').length > 0) {
-            cy.get('#nav-toggle').click()
-        }
+  cy.get('body').then(($body) => {
+    if ($body.find('.pf-m-collapsed').length > 0) {
+      cy.get('#nav-toggle').click()
+    }
 
-        const currentPerspective = $body.find('[data-test-id="perspective-switcher-toggle"]').text();
-        if (currentPerspective.includes(perspective)) {
-            cy.log('Already on ' + perspective + ' perspective');
-            return;
-        }
+    const currentPerspective = $body.find('[data-test-id="perspective-switcher-toggle"]').text();
+    if (currentPerspective.includes(perspective)) {
+      cy.log('Already on ' + perspective + ' perspective');
+      return;
+    }
 
-        cy.byLegacyTestID('perspective-switcher-toggle').click();
-        cy.byLegacyTestID(`perspective-switcher-menu-option-${perspective.toLowerCase()}`).click();
-    });
+    cy.byLegacyTestID('perspective-switcher-toggle').click();
+    cy.byLegacyTestID(`perspective-switcher-menu-option-${perspective.toLowerCase()}`).click();
+  });
 });
 
 Cypress.Commands.add("cliLogin", (username?, password?, hostapi?) => {
@@ -253,7 +253,7 @@ Cypress.Commands.add("cliLogin", (username?, password?, hostapi?) => {
     .then(result => {
       cy.log(result.stderr);
       cy.log(result.stdout);
-  });
+    });
 });
 
 Cypress.Commands.add("adminCLI", (command: string, options?: {}) => {
@@ -281,34 +281,34 @@ Cypress.Commands.add('retryTask', (command: string, expectedOutput: string, opti
 
 Cypress.Commands.add("checkCommandResult", (command: string, expectedoutput: string, options?: any) => {
   cy.retryTask(command, expectedoutput, options)
-    .then((conditionMet: boolean) =>{
+    .then((conditionMet: boolean) => {
       if (!conditionMet) {
         throw new Error(`"${command}" failed to meet expectedoutput ${expectedoutput} within ${options.retries} retries`);
       }
     })
 });
 
-Cypress.Commands.add('uiLogin', (provider: string, username: string, password: string)=> {
+Cypress.Commands.add('uiLogin', (provider: string, username: string, password: string) => {
   cy.clearCookie('openshift-session-token');
   cy.visit('/');
   cy.window().then((win: any) => {
-    if(win.SERVER_FLAGS?.authDisabled) {
+    if (win.SERVER_FLAGS?.authDisabled) {
       cy.task('log', 'Skipping login, console is running with auth disabled');
       return;
     }
-  cy.get('[data-test-id="login"]').should('be.visible');
-  cy.get('body').then(($body) => {
-    if ($body.text().includes(provider)) {
-      cy.contains(provider).should('be.visible').click();
-    }else if ($body.find('li.idp').length > 0) {
-      cy.get('li.idp').last().click();
-    }
-  });
-  cy.get('#inputUsername').type(username);
-  cy.get('#inputPassword').type(password);
-  cy.get('button[type=submit]').click();
-  cy.byTestID("username", {timeout: 120000})
-    .should('be.visible');
+    cy.get('[data-test-id="login"]').should('be.visible');
+    cy.get('body').then(($body) => {
+      if ($body.text().includes(provider)) {
+        cy.contains(provider).should('be.visible').click();
+      } else if ($body.find('li.idp').length > 0) {
+        cy.get('li.idp').last().click();
+      }
+    });
+    cy.get('#inputUsername').type(username);
+    cy.get('#inputPassword').type(password);
+    cy.get('button[type=submit]').click();
+    cy.byTestID("username", { timeout: 120000 })
+      .should('be.visible');
   });
   guidedTour.close();
   cy.switchPerspective('Administrator');
@@ -320,7 +320,7 @@ Cypress.Commands.add('login', (provider: string, username: string, password: str
 
 Cypress.Commands.add('uiLogout', () => {
   cy.window().then((win: any) => {
-    if (win.SERVER_FLAGS?.authDisabled){
+    if (win.SERVER_FLAGS?.authDisabled) {
       cy.log('Skipping logout, console is running with auth disabled');
       return;
     }
