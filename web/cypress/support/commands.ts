@@ -192,7 +192,7 @@ Cypress.Commands.add('changeMetricType', (name) => {
 
   cy.get('#metricType-dropdown').click();
   cy.get('.pf-v6-c-menu__content').filter(':visible').contains(name).click();
-  
+
   // For Packets metric, we expect a full page error due to mock timeout
   if (name === 'Packets') {
     cy.get('[data-test="error-state"]').should('exist');
@@ -294,8 +294,8 @@ Cypress.Commands.add('uiLogin', (provider: string, username: string, password: s
   cy.clearAllCookies();
   cy.visit('/');
 
-  // Wait a moment for potential redirect to OAuth server
-  cy.url({ timeout: 30000 }).should('include', '/oauth/authorize').then((url) => {
+  // Wait for redirect to OAuth login page
+  cy.url({ timeout: 30000 }).should('match', /\/login|\/oauth\/authorize/).then((url) => {
     const currentUrl = new URL(url);
 
     cy.log(`Current URL: ${url}`);
