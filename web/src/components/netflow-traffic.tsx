@@ -20,6 +20,7 @@ import {
 import { FetchCallbacks, NetflowContext, NetflowContextValue } from '../model/netflow-context';
 import { getGroupsForScope } from '../model/scope';
 import { DefaultOptions, GraphElementPeer, TopologyOptions } from '../model/topology';
+import { defaultGenericPrefs, DraftView, GenericPrefs, getViewPreset, ViewPresetId } from '../model/views';
 import { Column, ColumnSizeMap } from '../utils/columns';
 import { useConfigValidation } from '../utils/config-validation-hook';
 import { ContextSingleton } from '../utils/context';
@@ -28,9 +29,12 @@ import { useFullScreen } from '../utils/fullscreen-hook';
 import { useK8sModelsWithColors } from '../utils/k8s-models-hook';
 import {
   defaultArraySelectionOptions,
+  localStorageActiveViewKey,
   localStorageColsKey,
   localStorageColsSizesKey,
   localStorageDisabledFiltersKey,
+  localStorageGenericColumnPrefsKey,
+  localStorageGenericPanelPrefsKey,
   localStorageLastLimitKey,
   localStorageLastTopKey,
   localStorageMetricFunctionKey,
@@ -50,7 +54,7 @@ import {
 } from '../utils/local-storage-hook';
 import { useConfigCapabilities } from '../utils/netflow-capabilities-hook';
 import { InitState, useDataFetching } from '../utils/netflow-fetching-hook';
-import { OverviewPanel } from '../utils/overview-panels';
+import { getPanelFeature, OverviewPanel } from '../utils/overview-panels';
 import {
   defaultMetricFunction,
   defaultMetricScope,
@@ -74,6 +78,7 @@ import { limitValues, topValues } from './dropdowns/query-options-panel';
 import { RefreshDropdown } from './dropdowns/refresh-dropdown';
 import TimeRangeDropdown from './dropdowns/time-range-dropdown';
 import { TruncateLength } from './dropdowns/truncate-dropdown';
+import { ViewSelector } from './dropdowns/view-selector';
 import GuidedTourPopover, { GuidedTourHandle } from './guided-tour/guided-tour';
 import Modals from './modals/modals';
 import './netflow-traffic.css';
@@ -149,6 +154,17 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   );
   const [columns, setColumns] = useLocalStorage<Column[]>(localStorageColsKey, [], defaultArraySelectionOptions);
   const [_columnSizes, setColumnSizes] = useLocalStorage<ColumnSizeMap>(localStorageColsSizesKey, {});
+  const [activeView, setActiveView] = useLocalStorage<ViewPresetId>(localStorageActiveViewKey, 'all');
+  const [genericColumnPrefs, setGenericColumnPrefs] = useLocalStorage<GenericPrefs>(
+    localStorageGenericColumnPrefsKey,
+    defaultGenericPrefs
+  );
+  const [genericPanelPrefs, setGenericPanelPrefs] = useLocalStorage<GenericPrefs>(
+    localStorageGenericPanelPrefsKey,
+    defaultGenericPrefs
+  );
+  // Draft state (not persisted — lost on refresh)
+  const [draftView, setDraftView] = React.useState<DraftView | null>(null);
 
   // Display state
   const [isViewOptionOverflowMenuOpen, setViewOptionOverflowMenuOpen] = React.useState(false);
@@ -188,6 +204,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     dataSource,
     columns,
     panels,
+    activeView,
     metricScope,
     topologyOptions,
     topologyMetricType,
@@ -197,7 +214,10 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     limit,
     recordType,
     packetLoss,
-    range
+    range,
+    genericColumnPrefs,
+    genericPanelPrefs,
+    draftView
   });
 
   // ===== WRAPPED SETTERS FOR COMPLEX LOGIC =====
@@ -245,6 +265,8 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   const searchRef = React.useRef<SearchHandle>(null);
   const guidedTourRef = React.useRef<GuidedTourHandle>(null);
   const initState = React.useRef<InitState>([]);
+  // Stores the user's original metric type before a view preset overrides it
+  const savedMetricType = React.useRef<MetricType>(topologyMetricType);
 
   // Data-fetching hook
   const {
@@ -292,9 +314,163 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     queryParams
   });
 
+  // Keep savedMetricType in sync when user is on "All Traffic" and manually changes metric type
+  React.useEffect(() => {
+    if (activeView === 'all') {
+      savedMetricType.current = topologyMetricType;
+    }
+  }, [topologyMetricType, activeView]);
+
+  const applyView = React.useCallback(
+    (viewId: ViewPresetId) => {
+      setActiveView(viewId);
+      if (viewId === 'all') {
+        updateTopologyMetricType(savedMetricType.current);
+        return;
+      }
+      const preset = getViewPreset(viewId);
+      if (!preset) {
+        return;
+      }
+      if (preset.topologyMetricType) {
+        updateTopologyMetricType(preset.topologyMetricType);
+      }
+    },
+    [setActiveView, updateTopologyMetricType]
+  );
+
+  const setColumnsWithDraft = React.useCallback(
+    (newColumns: Column[]) => {
+      if (activeView === 'all') {
+        setColumns(newColumns);
+        return;
+      }
+      // Feature view: merge preset + user selections, create draft only if feature columns differ
+      const preset = getViewPreset(activeView);
+      const presetColIds = new Set(preset?.columns ?? []);
+      const presetColSet = new Set(caps.selectedColumns.map(c => c.id as string));
+      const userSelectedIds = newColumns.filter(c => c.isSelected).map(c => c.id as string);
+      const mergedColIds = new Set([...presetColSet, ...userSelectedIds]);
+      const uncheckedIds = new Set(newColumns.filter(c => !c.isSelected).map(c => c.id as string));
+      uncheckedIds.forEach(id => mergedColIds.delete(id));
+
+      // Check if any non-generic (feature) columns differ from preset
+      const hasFeatureChanges = newColumns.some(c => {
+        if (!c.feature) return false; // generic — handled by generic prefs
+        const inPreset = presetColIds.has(c.id);
+        return c.isSelected !== inPreset;
+      });
+
+      if (hasFeatureChanges) {
+        setDraftView(prev => ({
+          baseViewId: activeView,
+          columns: Array.from(mergedColIds),
+          panels: prev?.panels ?? caps.selectedPanels.map(p => p.id as string),
+          topologyMetricType: prev?.topologyMetricType ?? topologyMetricType
+        }));
+      } else {
+        // Only clear draft if editing the same view the draft belongs to
+        setDraftView(prev => (prev?.baseViewId === activeView ? null : prev));
+      }
+    },
+    [setColumns, activeView, caps.selectedColumns, caps.selectedPanels, topologyMetricType]
+  );
+
+  const setPanelsWithDraft = React.useCallback(
+    (newPanels: OverviewPanel[]) => {
+      if (activeView === 'all') {
+        setPanels(newPanels);
+        return;
+      }
+      // Feature view: merge preset + user selections, create draft only if feature panels differ
+      const preset = getViewPreset(activeView);
+      const presetPanelIds = new Set((preset?.panels ?? []) as string[]);
+      const presetPanelSet = new Set(caps.selectedPanels.map(p => p.id as string));
+      const userSelectedIds = newPanels.filter(p => p.isSelected).map(p => p.id as string);
+      const mergedPanelIds = new Set([...presetPanelSet, ...userSelectedIds]);
+      const uncheckedIds = new Set(newPanels.filter(p => !p.isSelected).map(p => p.id as string));
+      uncheckedIds.forEach(id => mergedPanelIds.delete(id));
+
+      // Check if any non-generic (feature) panels differ from preset
+      const hasFeatureChanges = newPanels.some(p => {
+        if (!getPanelFeature(p.id)) return false; // generic — handled by generic prefs
+        const inPreset = presetPanelIds.has(p.id);
+        return p.isSelected !== inPreset;
+      });
+
+      if (hasFeatureChanges) {
+        setDraftView(prev => ({
+          baseViewId: activeView,
+          columns: prev?.columns ?? caps.selectedColumns.map(c => c.id as string),
+          panels: Array.from(mergedPanelIds),
+          topologyMetricType: prev?.topologyMetricType ?? topologyMetricType
+        }));
+      } else {
+        // Only clear draft if editing the same view the draft belongs to
+        setDraftView(prev => (prev?.baseViewId === activeView ? null : prev));
+      }
+    },
+    [setPanels, activeView, caps.selectedColumns, caps.selectedPanels, topologyMetricType]
+  );
+
+  // Sync draft with generic prefs changes, or auto-clear if draft matches preset
+  React.useEffect(() => {
+    if (!draftView) return;
+    const preset = getViewPreset(draftView.baseViewId);
+    if (!preset?.columns || !preset?.panels) return;
+
+    // Compute expected base: preset + generic prefs (without feature changes)
+    const expectedCols = new Set(preset.columns);
+    genericColumnPrefs.removed.forEach(id => expectedCols.delete(id));
+    genericColumnPrefs.added.forEach(id => expectedCols.add(id));
+    const expectedPanels = new Set(preset.panels as string[]);
+    genericPanelPrefs.removed.forEach(id => expectedPanels.delete(id));
+    genericPanelPrefs.added.forEach(id => expectedPanels.add(id));
+
+    // Extract feature-only changes from draft (non-generic columns/panels that differ from preset)
+    const presetColSet = new Set(preset.columns);
+    const draftFeatureCols = draftView.columns.filter(id => {
+      const col = caps.availableColumns.find(c => c.id === id);
+      return col?.feature && !presetColSet.has(id);
+    });
+    const presetPanelSet = new Set(preset.panels as string[]);
+    const draftFeaturePanels = draftView.panels.filter(id => {
+      return getPanelFeature(id) && !presetPanelSet.has(id);
+    });
+
+    // Rebuild draft: expected base + feature changes
+    const updatedCols = new Set([...expectedCols, ...draftFeatureCols]);
+    const updatedPanels = new Set([...expectedPanels, ...draftFeaturePanels]);
+
+    // If no feature changes remain, clear draft entirely
+    if (draftFeatureCols.length === 0 && draftFeaturePanels.length === 0) {
+      setDraftView(null);
+      return;
+    }
+
+    // Update draft if generic prefs changed its contents
+    const colsChanged =
+      updatedCols.size !== draftView.columns.length || !draftView.columns.every(id => updatedCols.has(id));
+    const panelsChanged =
+      updatedPanels.size !== draftView.panels.length || !draftView.panels.every(id => updatedPanels.has(id));
+
+    if (colsChanged || panelsChanged) {
+      setDraftView({
+        ...draftView,
+        columns: Array.from(updatedCols),
+        panels: Array.from(updatedPanels)
+      });
+    }
+  }, [draftView, genericColumnPrefs, genericPanelPrefs, caps.availableColumns]);
+
+  const onDiscardDraft = React.useCallback(() => {
+    setDraftView(null);
+  }, []);
+
   const resetDefaultFilters = React.useCallback(() => {
+    applyView('all');
     updateTableFilters({ match: filters.match, list: caps.defaultFilters });
-  }, [filters.match, caps.defaultFilters, updateTableFilters]);
+  }, [filters.match, caps.defaultFilters, updateTableFilters, applyView]);
 
   const setFiltersFromURL = React.useCallback(() => {
     if (forcedFilters === null) {
@@ -340,7 +516,9 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     setTopologyMetricType,
     setColumns,
     setPanels,
-    setFiltersFromURL
+    setFiltersFromURL,
+    activeView,
+    setActiveView: applyView
   });
 
   // Sync state to URL params
@@ -357,6 +535,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     packetLoss,
     recordType,
     dataSource,
+    activeView,
     setQueryParams,
     setTRModalOpen
   });
@@ -404,6 +583,20 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   const actions = () => {
     return (
       <Flex direction={{ default: 'row' }}>
+        {caps.availableViews.length > 1 && (
+          <FlexItem>
+            <Flex direction={{ default: 'column' }}>
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <ViewSelector
+                  activeView={activeView}
+                  setActiveView={applyView}
+                  draftView={draftView}
+                  onDiscardDraft={onDiscardDraft}
+                />
+              </FlexItem>
+            </Flex>
+          </FlexItem>
+        )}
         <FlexItem flex={{ default: 'flex_1' }}>
           <TimeRangeDropdown
             data-test="time-range-dropdown"
@@ -619,15 +812,20 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
             setRange={setRange}
             isOverviewModalOpen={isOverviewModalOpen}
             setOverviewModalOpen={setOverviewModalOpen}
-            setPanels={setPanels}
+            setPanels={setPanelsWithDraft}
             isColModalOpen={isColModalOpen}
             setColModalOpen={setColModalOpen}
             isExportModalOpen={isExportModalOpen}
             setExportModalOpen={setExportModalOpen}
             recordType={recordType}
             setColumnSizes={setColumnSizes}
-            setColumns={setColumns}
+            setColumns={setColumnsWithDraft}
             filters={(forcedFilters || filters).list}
+            activeView={activeView}
+            genericColumnPrefs={genericColumnPrefs}
+            setGenericColumnPrefs={setGenericColumnPrefs}
+            genericPanelPrefs={genericPanelPrefs}
+            setGenericPanelPrefs={setGenericPanelPrefs}
           />
         )}
         <GuidedTourPopover id="netobserv" ref={guidedTourRef} isDark={isDarkTheme} />

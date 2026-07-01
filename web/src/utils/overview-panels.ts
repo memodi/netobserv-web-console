@@ -8,6 +8,16 @@ export const droppedIdMatcher = 'dropped';
 export const tlsIdMatcher = 'tls_';
 export const customPanelMatcher = 'custom';
 
+export type PanelFeature = 'pktDrop' | 'dnsTracking' | 'flowRTT' | 'tlsTracking';
+
+export const getPanelFeature = (panelId: string): PanelFeature | undefined => {
+  if (panelId.includes(droppedIdMatcher)) return 'pktDrop';
+  if (panelId.includes(dnsIdMatcher)) return 'dnsTracking';
+  if (panelId.includes(rttIdMatcher)) return 'flowRTT';
+  if (panelId.includes(tlsIdMatcher)) return 'tlsTracking';
+  return undefined;
+};
+
 export const getRateFunctionFromId = (id: string) => {
   return id.endsWith('byte_rates') ? 'bytes' : 'packets';
 };
@@ -65,25 +75,13 @@ export type OverviewPanelInfo = {
   tooltip?: string;
 };
 
+// Base panels only — feature-specific panels (pktDrop, dns, rtt, tls) selected via feature Views
 export const defaultPanelIds: OverviewPanelId[] = [
   'overview',
   'top_sankey',
   'inbound_region',
   'top_avg_byte_rates',
-  'byte_rates',
-  'top_avg_dropped_packet_rates',
-  'dropped_packet_rates',
-  'state_dropped_packet_rates',
-  'cause_dropped_packet_rates',
-  'top_avg_dns_latency',
-  'top_p90_dns_latency',
-  'name_dns_latency_flows',
-  'rcode_dns_latency_flows',
-  'bottom_min_rtt', // should remove from defaults?
-  'top_avg_rtt',
-  'top_p90_rtt',
-  'tls_usage_global',
-  'tls_per_version'
+  'byte_rates'
 ];
 
 export const getDefaultOverviewPanels = (customIds?: string[]): OverviewPanel[] => {

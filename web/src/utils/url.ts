@@ -101,7 +101,8 @@ export enum URLParam {
   DataSource = 'dataSource',
   ShowDuplicates = 'showDup',
   MetricFunction = 'function',
-  MetricType = 'type'
+  MetricType = 'type',
+  View = 'view'
 }
 export type URLParams = { [k in URLParam]?: unknown };
 
