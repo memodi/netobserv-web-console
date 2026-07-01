@@ -16,6 +16,7 @@ import * as _ from 'lodash';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Config } from '../../model/config';
+import { defaultGenericPrefs, GenericPrefs, getViewPreset, ViewPresetId } from '../../model/views';
 import { Column, ColumnSizeMap, getDefaultColumns, getFullColumnName } from '../../utils/columns';
 import './columns-modal.css';
 import Modal, { ensureRootElement } from './modal';
@@ -29,6 +30,9 @@ export interface ColumnsModalProps {
   setColumns: (v: Column[]) => void;
   setColumnSizes: (v: ColumnSizeMap) => void;
   config: Config;
+  activeView: ViewPresetId;
+  genericPrefs: GenericPrefs;
+  setGenericPrefs: (v: GenericPrefs) => void;
   id?: string;
 }
 
@@ -39,7 +43,10 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
   setModalOpen,
   columns,
   setColumns,
-  setColumnSizes
+  setColumnSizes,
+  activeView,
+  genericPrefs,
+  setGenericPrefs
 }) => {
   React.useEffect(() => {
     ensureRootElement();
@@ -57,11 +64,16 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
   }, [isModalOpen]);
 
   React.useEffect(() => {
-    if (!isModalOpen || _.isEmpty(updatedColumns)) {
+    if (resetClicked) return; // Don't overwrite reset state
+    if (isModalOpen || _.isEmpty(updatedColumns)) {
       setUpdatedColumns(_.cloneDeep(columns));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columns, isModalOpen]);
+
+  const isDisplaySelected = React.useCallback((col: Column): boolean => {
+    return col.isSelected;
+  }, []);
 
   const onCheck = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -78,14 +90,24 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
 
   const onReset = React.useCallback(() => {
     setResetClicked(true);
-    setUpdatedColumns(
-      getDefaultColumns(config.columns, config.fields).filter(c => columns.some(existing => existing.id === c.id))
-    );
-  }, [columns, config.columns, config.fields]);
+    if (activeView !== 'all') {
+      // Feature view: reset to preset's columns
+      const preset = getViewPreset(activeView);
+      const presetColIds = new Set(preset?.columns ?? []);
+      const resetColumns = columns.map(c => ({ ...c, isSelected: presetColIds.has(c.id) }));
+      setUpdatedColumns(resetColumns);
+    } else {
+      // "All Traffic": reset to config defaults
+      const defaults = getDefaultColumns(config.columns, config.fields).filter(c =>
+        columns.some(existing => existing.id === c.id)
+      );
+      setUpdatedColumns(defaults);
+    }
+  }, [columns, config.columns, config.fields, activeView]);
 
   const isSaveDisabled = React.useCallback(() => {
-    return _.isEmpty(updatedColumns.filter(c => c.isSelected));
-  }, [updatedColumns]);
+    return _.isEmpty(updatedColumns.filter(c => isDisplaySelected(c)));
+  }, [updatedColumns, isDisplaySelected]);
 
   const isFilteredColumn = React.useCallback((c: Column, fks: string[]) => {
     return (
@@ -132,8 +154,9 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
   );
 
   const isAllSelected = React.useCallback(() => {
-    return _.reduce(filteredColumns(), (acc, c) => (acc = acc && c.isSelected), true);
-  }, [filteredColumns]);
+    const filtered = filteredColumns();
+    return filtered.length > 0 && _.reduce(filtered, (acc, c) => (acc = acc && isDisplaySelected(c)), true);
+  }, [filteredColumns, isDisplaySelected]);
 
   const onSelectAll = React.useCallback(() => {
     const allSelected = isAllSelected();
@@ -151,10 +174,51 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
   const onSave = React.useCallback(() => {
     if (resetClicked) {
       setColumnSizes({});
+      // On reset, clear generic prefs and skip recomputation
+      setGenericPrefs(defaultGenericPrefs);
+      setColumns(updatedColumns);
+      onClose();
+      return;
     }
+
+    // Update generic prefs only for columns the user actually toggled
+    const initialMap = new Map(columns.map(c => [c.id, c.isSelected]));
+    const newAdded = [...genericPrefs.added];
+    const newRemoved = [...genericPrefs.removed];
+    let prefsChanged = false;
+    for (const col of updatedColumns) {
+      if (col.feature) continue; // skip feature columns
+      const wasSelected = initialMap.get(col.id) ?? false;
+      if (col.isSelected === wasSelected) continue; // no change
+      if (col.isSelected) {
+        const removedIdx = newRemoved.indexOf(col.id);
+        if (removedIdx >= 0) {
+          newRemoved.splice(removedIdx, 1);
+          prefsChanged = true;
+        }
+        if (!newAdded.includes(col.id)) {
+          newAdded.push(col.id);
+          prefsChanged = true;
+        }
+      } else {
+        const addedIdx = newAdded.indexOf(col.id);
+        if (addedIdx >= 0) {
+          newAdded.splice(addedIdx, 1);
+          prefsChanged = true;
+        }
+        if (!newRemoved.includes(col.id)) {
+          newRemoved.push(col.id);
+          prefsChanged = true;
+        }
+      }
+    }
+    if (prefsChanged) {
+      setGenericPrefs({ added: newAdded, removed: newRemoved });
+    }
+
     setColumns(updatedColumns);
     onClose();
-  }, [resetClicked, setColumns, updatedColumns, onClose, setColumnSizes]);
+  }, [resetClicked, setColumns, updatedColumns, onClose, setColumnSizes, columns, genericPrefs, setGenericPrefs]);
 
   const toggleChip = React.useCallback(
     (key: string) => {
@@ -176,7 +240,7 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
             <DataListControl>
               <DataListCheck
                 aria-labelledby={'table-column-management-item-' + i}
-                isChecked={column.isSelected}
+                isChecked={isDisplaySelected(column)}
                 id={column.id}
                 onChange={onCheck}
               />
