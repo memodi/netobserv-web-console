@@ -19,6 +19,7 @@ import {
 } from '../model/flow-query';
 import { FetchCallbacks, NetflowContext, NetflowContextValue } from '../model/netflow-context';
 import { getGroupsForScope } from '../model/scope';
+import { getViewPreset, ViewPresetId } from '../model/views';
 import { DefaultOptions, GraphElementPeer, TopologyOptions } from '../model/topology';
 import { Column, ColumnSizeMap } from '../utils/columns';
 import { useConfigValidation } from '../utils/config-validation-hook';
@@ -28,6 +29,7 @@ import { useFullScreen } from '../utils/fullscreen-hook';
 import { useK8sModelsWithColors } from '../utils/k8s-models-hook';
 import {
   defaultArraySelectionOptions,
+  localStorageActiveViewKey,
   localStorageColsKey,
   localStorageColsSizesKey,
   localStorageDisabledFiltersKey,
@@ -73,6 +75,7 @@ import { rateMetricFunctions, timeMetricFunctions } from './dropdowns/metric-fun
 import { limitValues, topValues } from './dropdowns/query-options-panel';
 import { RefreshDropdown } from './dropdowns/refresh-dropdown';
 import TimeRangeDropdown from './dropdowns/time-range-dropdown';
+import { ViewSelector } from './dropdowns/view-selector';
 import { TruncateLength } from './dropdowns/truncate-dropdown';
 import GuidedTourPopover, { GuidedTourHandle } from './guided-tour/guided-tour';
 import Modals from './modals/modals';
@@ -149,6 +152,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   );
   const [columns, setColumns] = useLocalStorage<Column[]>(localStorageColsKey, [], defaultArraySelectionOptions);
   const [_columnSizes, setColumnSizes] = useLocalStorage<ColumnSizeMap>(localStorageColsSizesKey, {});
+  const [activeView, setActiveView] = useLocalStorage<ViewPresetId>(localStorageActiveViewKey, 'all');
 
   // Display state
   const [isViewOptionOverflowMenuOpen, setViewOptionOverflowMenuOpen] = React.useState(false);
@@ -188,6 +192,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     dataSource,
     columns,
     panels,
+    activeView,
     metricScope,
     topologyOptions,
     topologyMetricType,
@@ -293,8 +298,27 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   });
 
   const resetDefaultFilters = React.useCallback(() => {
+    setActiveView('all');
     updateTableFilters({ match: filters.match, list: caps.defaultFilters });
-  }, [filters.match, caps.defaultFilters, updateTableFilters]);
+  }, [filters.match, caps.defaultFilters, updateTableFilters, setActiveView]);
+
+  const applyView = React.useCallback(
+    (viewId: ViewPresetId) => {
+      setActiveView(viewId);
+      if (viewId === 'all') {
+        // Don't reset panels/columns — restore user's custom localStorage selection
+        return;
+      }
+      const preset = getViewPreset(viewId);
+      if (!preset) {
+        return;
+      }
+      if (preset.topologyMetricType) {
+        updateTopologyMetricType(preset.topologyMetricType);
+      }
+    },
+    [setActiveView, updateTopologyMetricType]
+  );
 
   const setFiltersFromURL = React.useCallback(() => {
     if (forcedFilters === null) {
@@ -340,7 +364,9 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     setTopologyMetricType,
     setColumns,
     setPanels,
-    setFiltersFromURL
+    setFiltersFromURL,
+    activeView,
+    setActiveView
   });
 
   // Sync state to URL params
@@ -357,6 +383,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     packetLoss,
     recordType,
     dataSource,
+    activeView,
     setQueryParams,
     setTRModalOpen
   });
@@ -404,6 +431,22 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   const actions = () => {
     return (
       <Flex direction={{ default: 'row' }}>
+        {caps.availableViews.length > 1 && (
+          <FlexItem>
+            <Flex direction={{ default: 'column' }}>
+              <FlexItem className="netobserv-action-title">
+                <Content component={ContentVariants.h4}>{t('View')}</Content>
+              </FlexItem>
+              <FlexItem>
+                <ViewSelector
+                  activeView={activeView}
+                  setActiveView={applyView}
+                  availableViews={caps.availableViews}
+                />
+              </FlexItem>
+            </Flex>
+          </FlexItem>
+        )}
         <FlexItem>
           <Flex direction={{ default: 'column' }}>
             <FlexItem className="netobserv-action-title">

@@ -12,6 +12,7 @@ import {
 import { ConfigCapabilities } from './netflow-capabilities-hook';
 import { getDefaultOverviewPanels, OverviewPanel } from './overview-panels';
 import { defaultMetricScope, defaultMetricType, setURLFilters } from './router';
+import { ViewPresetId } from '../model/views';
 
 type InitState = React.MutableRefObject<string[]>;
 
@@ -34,6 +35,8 @@ export function useConfigValidation(params: {
   setColumns: React.Dispatch<React.SetStateAction<Column[]>>;
   setPanels: React.Dispatch<React.SetStateAction<OverviewPanel[]>>;
   setFiltersFromURL: () => void;
+  activeView: ViewPresetId;
+  setActiveView: (v: ViewPresetId) => void;
 }): void {
   const {
     initState,
@@ -53,7 +56,9 @@ export function useConfigValidation(params: {
     setTopologyMetricType,
     setColumns,
     setPanels,
-    setFiltersFromURL
+    setFiltersFromURL,
+    activeView,
+    setActiveView
   } = params;
 
   // invalidate match filters if not set to all when filters are empty
@@ -112,6 +117,17 @@ export function useConfigValidation(params: {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caps.allowedMetricTypes, topologyMetricType, setTopologyMetricType]);
+
+  // invalidate active view if its required feature is no longer enabled
+  React.useEffect(() => {
+    if (initState.current.includes('configLoaded') && activeView !== 'all') {
+      const isViewAvailable = caps.availableViews.some(v => v.id === activeView);
+      if (!isViewAvailable) {
+        setActiveView('all');
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caps.availableViews, activeView]);
 
   // select columns / panels from local storage on config change
   React.useEffect(() => {

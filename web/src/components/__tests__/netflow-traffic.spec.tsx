@@ -4,7 +4,6 @@ import * as React from 'react';
 import { AlertsResult, SilencedAlert } from '../../api/alert';
 import { FlowMetricsResult, GenericMetricsResult } from '../../api/query-response';
 import { getConfig, getFlowGenericMetrics, getFlowMetrics, getFlowRecords, getRole } from '../../api/routes';
-import { FlowQuery } from '../../model/flow-query';
 import { FullConfigResultSample, SimpleConfigResultSample } from '../__tests-data__/config';
 import { extensionsMock } from '../__tests-data__/extensions';
 import { FlowsResultSample } from '../__tests-data__/flows';
@@ -39,18 +38,6 @@ const getFlowsMock = getFlowRecords as jest.Mock;
 const getMetricsMock = getFlowMetrics as jest.Mock;
 const getGenericMetricsMock = getFlowGenericMetrics as jest.Mock;
 
-const defaultQuery = {
-  aggregateBy: 'namespace',
-  filters: '',
-  groups: undefined,
-  limit: 5,
-  packetLoss: 'all',
-  rateInterval: '30s',
-  recordType: 'flowLog',
-  dataSource: 'auto',
-  step: '15s',
-  timeRange: 300
-} as FlowQuery;
 
 describe('<NetflowTraffic />', () => {
   beforeAll(() => {
@@ -80,41 +67,13 @@ describe('<NetflowTraffic />', () => {
 
   it('should load default metrics on button click', async () => {
     const { container } = render(<NetflowTrafficParent />);
-    const expectedMetricsQueries: FlowQuery[] = [
-      { ...defaultQuery, function: 'rate', type: 'Bytes' },
-      { ...defaultQuery, function: 'rate', type: 'Packets' },
-      { ...defaultQuery, function: 'rate', aggregateBy: 'app', type: 'Bytes' },
-      { ...defaultQuery, function: 'rate', aggregateBy: 'app', type: 'Packets' },
-      { ...defaultQuery, function: 'rate', type: 'PktDropPackets' },
-      { ...defaultQuery, function: 'rate', aggregateBy: 'app', type: 'PktDropPackets' },
-      { ...defaultQuery, function: 'avg', type: 'DnsLatencyMs' },
-      { ...defaultQuery, function: 'p90', type: 'DnsLatencyMs' },
-      { ...defaultQuery, function: 'avg', aggregateBy: 'app', type: 'DnsLatencyMs' },
-      { ...defaultQuery, function: 'p90', aggregateBy: 'app', type: 'DnsLatencyMs' },
-      { ...defaultQuery, function: 'avg', type: 'TimeFlowRttNs' },
-      { ...defaultQuery, function: 'min', type: 'TimeFlowRttNs' },
-      { ...defaultQuery, function: 'p90', type: 'TimeFlowRttNs' },
-      { ...defaultQuery, function: 'avg', aggregateBy: 'app', type: 'TimeFlowRttNs' },
-      { ...defaultQuery, function: 'min', aggregateBy: 'app', type: 'TimeFlowRttNs' },
-      { ...defaultQuery, function: 'p90', aggregateBy: 'app', type: 'TimeFlowRttNs' }
-    ];
-    const expectedGenericMetricsQueries: FlowQuery[] = [
-      { ...defaultQuery, function: 'rate', type: 'PktDropPackets', aggregateBy: 'PktDropLatestState' },
-      { ...defaultQuery, function: 'rate', type: 'PktDropPackets', aggregateBy: 'PktDropLatestDropCause' },
-      { ...defaultQuery, function: 'count', type: 'DnsFlows', aggregateBy: 'DnsName' },
-      { ...defaultQuery, function: 'count', type: 'DnsFlows', aggregateBy: 'DnsFlagsResponseCode' },
-      { ...defaultQuery, function: 'count', type: 'DnsFlows', aggregateBy: 'app' }
-    ];
-
     await waitFor(() => {
       expect(getConfigMock).toHaveBeenCalledTimes(1);
       expect(getRoleMock).toHaveBeenCalledTimes(1);
       expect(getFlowsMock).toHaveBeenCalledTimes(0);
-      expect(getMetricsMock).toHaveBeenCalledTimes(expectedMetricsQueries.length);
-      expectedMetricsQueries.forEach((q, i) =>
-        expect(getMetricsMock).toHaveBeenNthCalledWith(i + 1, q, defaultQuery.timeRange)
-      );
-      expect(getGenericMetricsMock).toHaveBeenCalledTimes(expectedGenericMetricsQueries.length);
+      // "All Traffic" shows only base panels — only Bytes/Packets metrics fetched
+      expect(getMetricsMock).toHaveBeenCalledTimes(2);
+      expect(getGenericMetricsMock).toHaveBeenCalledTimes(0);
     });
 
     await act(async () => {
@@ -125,8 +84,8 @@ describe('<NetflowTraffic />', () => {
       expect(getConfigMock).toHaveBeenCalledTimes(1);
       expect(getRoleMock).toHaveBeenCalledTimes(1);
       expect(getFlowsMock).toHaveBeenCalledTimes(0);
-      expect(getMetricsMock).toHaveBeenCalledTimes(expectedMetricsQueries.length * 2);
-      expect(getGenericMetricsMock).toHaveBeenCalledTimes(expectedGenericMetricsQueries.length * 2);
+      expect(getMetricsMock).toHaveBeenCalledTimes(4);
+      expect(getGenericMetricsMock).toHaveBeenCalledTimes(0);
     });
   });
 

@@ -13,7 +13,8 @@ import { Column, ColumnsId } from './columns';
 import { ContextSingleton } from './context';
 import { computeStepInterval, TimeRange } from './datetime';
 import { checkFilterAvailable, getFilterDefinitions } from './filter-definitions';
-import { dnsIdMatcher, droppedIdMatcher, OverviewPanel, rttIdMatcher, tlsIdMatcher } from './overview-panels';
+import { defaultPanelIds, dnsIdMatcher, droppedIdMatcher, OverviewPanel, rttIdMatcher, tlsIdMatcher } from './overview-panels';
+import { getAvailableViews, getViewPreset, ViewPreset, ViewPresetId } from '../model/views';
 
 export interface ConfigCapabilities {
   allowLoki: boolean;
@@ -36,6 +37,7 @@ export interface ConfigCapabilities {
   defaultFilters: Filter[];
   flowQuery: StructuredFlowQuery;
   fetchFunctions: ReturnType<typeof getBackAndForthFetch>;
+  availableViews: ViewPreset[];
 }
 
 export function useConfigCapabilities(params: {
@@ -44,6 +46,7 @@ export function useConfigCapabilities(params: {
   dataSource: DataSource;
   columns: Column[];
   panels: OverviewPanel[];
+  activeView: ViewPresetId;
   metricScope: FlowScope;
   topologyOptions: TopologyOptions;
   topologyMetricType: MetricType;
@@ -61,6 +64,7 @@ export function useConfigCapabilities(params: {
     dataSource,
     columns,
     panels,
+    activeView,
     metricScope,
     topologyOptions,
     topologyMetricType,
@@ -121,7 +125,7 @@ export function useConfigCapabilities(params: {
 
   const allowedMetricTypes = React.useMemo(() => {
     let options: MetricType[] = ['Bytes', 'Packets'];
-    if (selectedViewId === 'topology') {
+    if (selectedViewId === 'topology' || activeView !== 'all') {
       if (isPktDrop) {
         options = options.concat('PktDropBytes', 'PktDropPackets');
       }
@@ -133,7 +137,7 @@ export function useConfigCapabilities(params: {
       }
     }
     return options;
-  }, [isDNSTracking, isFlowRTT, isPktDrop, selectedViewId]);
+  }, [isDNSTracking, isFlowRTT, isPktDrop, selectedViewId, activeView]);
 
   const availablePanels = React.useMemo(
     () =>
@@ -147,7 +151,17 @@ export function useConfigCapabilities(params: {
     [isDNSTracking, isFlowRTT, isPktDrop, isTLSTracking, panels]
   );
 
-  const selectedPanels = React.useMemo(() => availablePanels.filter(panel => panel.isSelected), [availablePanels]);
+  const selectedPanels = React.useMemo(() => {
+    const preset = activeView !== 'all' ? getViewPreset(activeView) : undefined;
+    if (preset?.panels) {
+      // Feature view: show preset panels + panels user explicitly added (not config defaults)
+      return availablePanels.filter(
+        panel => preset.panels!.includes(panel.id) || (panel.isSelected && !defaultPanelIds.includes(panel.id))
+      );
+    }
+    // "All Traffic": user's manual selection
+    return availablePanels.filter(panel => panel.isSelected);
+  }, [availablePanels, activeView]);
 
   const availableColumns = React.useMemo(
     () =>
@@ -159,7 +173,23 @@ export function useConfigCapabilities(params: {
     [columns, config.features, isConnectionTracking]
   );
 
-  const selectedColumns = React.useMemo(() => availableColumns.filter(column => column.isSelected), [availableColumns]);
+  // IDs of columns that are selected by default from config (default: true, no feature tag)
+  const defaultColumnIds = React.useMemo(
+    () => new Set(config.columns.filter(c => c.default && !c.feature).map(c => c.id)),
+    [config.columns]
+  );
+
+  const selectedColumns = React.useMemo(() => {
+    const preset = activeView !== 'all' ? getViewPreset(activeView) : undefined;
+    if (preset?.columns) {
+      // Feature view: show preset columns + columns user explicitly added (not config defaults)
+      return availableColumns.filter(
+        col => preset.columns!.includes(col.id as string) || (col.isSelected && !defaultColumnIds.has(col.id))
+      );
+    }
+    // "All Traffic": user's manual selection
+    return availableColumns.filter(column => column.isSelected);
+  }, [availableColumns, activeView, defaultColumnIds]);
 
   const filterDefs = React.useMemo(() => {
     const allFilterDefs = getFilterDefinitions(config.filters, config.columns, t);
@@ -240,6 +270,8 @@ export function useConfigCapabilities(params: {
     return getBackAndForthFetch(filterDefs);
   }, [filterDefs]);
 
+  const availableViews = React.useMemo(() => getAvailableViews(config.features), [config.features]);
+
   return {
     allowLoki,
     allowProm,
@@ -260,6 +292,7 @@ export function useConfigCapabilities(params: {
     quickFilters,
     defaultFilters,
     flowQuery,
-    fetchFunctions
+    fetchFunctions,
+    availableViews
   };
 }

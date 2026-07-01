@@ -196,3 +196,11 @@ export const setURLMetricType = (metricType?: MetricType, replace?: boolean) => 
     removeURLParam(URLParam.MetricType, replace);
   }
 };
+
+export const setURLView = (viewId: string, replace?: boolean) => {
+  if (viewId && viewId !== 'all') {
+    setURLParam(URLParam.View, viewId, replace);
+  } else {
+    removeURLParam(URLParam.View, replace);
+  }
+};
