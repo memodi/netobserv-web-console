@@ -22,6 +22,8 @@ reviews:
   auto_assign_reviewers: false
 
   auto_review:
+    base_branches: 
+    - "main.*"
     enabled: true
     drafts: false
     ignore_title_keywords:
