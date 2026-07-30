@@ -2,7 +2,7 @@ import { TFunction } from 'i18next';
 import { AggregateBy, MetricFunction, MetricType, StatFunction } from '../model/flow-query';
 import { Feature, isAllowed } from './features-gate';
 
-export const dnsLatencyMatcher = 'dns_latency';
+export const dnsMatcher = 'dns_';
 export const rttIdMatcher = 'rtt';
 export const droppedIdMatcher = 'dropped';
 export const tlsIdMatcher = 'tls_';

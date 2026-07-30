@@ -36,7 +36,7 @@ import { localStorageOverviewKebabKey, useLocalStorage } from '../../../utils/lo
 import { observeDOMRect, toNamedMetric } from '../../../utils/metrics-helper';
 import {
   customPanelMatcher,
-  dnsLatencyMatcher,
+  dnsMatcher,
   droppedIdMatcher,
   getFunctionFromId,
   getOverviewPanelInfo,
@@ -254,10 +254,10 @@ export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOv
       }
 
       if (features.includes('dnsTracking')) {
-        const dnsLatencyPanels = props.panels.filter(p => p.id.includes(dnsLatencyMatcher));
-        if (!_.isEmpty(dnsLatencyPanels)) {
+        const dnsPanels = props.panels.filter(p => p.id.includes(dnsMatcher));
+        if (!_.isEmpty(dnsPanels)) {
           //set dns metrics
-          const dnsLatencyMetrics = initFunctionMetricKeys(dnsLatencyPanels.map(p => p.id)) as FunctionMetrics;
+          const dnsLatencyMetrics = initFunctionMetricKeys(dnsPanels.map(p => p.id)) as FunctionMetrics;
           (Object.keys(dnsLatencyMetrics) as (keyof typeof dnsLatencyMetrics)[]).map(fn => {
             const fq: StructuredFlowQuery = { ...baseQuery, function: fn, type: 'DnsLatencyMs' };
             promises.push(
@@ -275,7 +275,7 @@ export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOv
             );
           });
 
-          const totalDnsLatencyMetric = initFunctionMetricKeys(dnsLatencyPanels.map(p => p.id)) as TotalFunctionMetrics;
+          const totalDnsLatencyMetric = initFunctionMetricKeys(dnsPanels.map(p => p.id)) as TotalFunctionMetrics;
           (Object.keys(totalDnsLatencyMetric) as (keyof typeof totalDnsLatencyMetric)[]).map(fn => {
             const fq: StructuredFlowQuery = { ...baseQuery, function: fn, aggregateBy: 'app', type: 'DnsLatencyMs' };
             promises.push(
@@ -295,8 +295,8 @@ export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOv
         }
 
         // DNS name & rcode
-        const hasRCode = props.panels.some(p => p.id === 'dns_rcode_flows');
-        const hasName = props.panels.some(p => p.id === 'dns_name_flows');
+        const hasRCode = dnsPanels.some(p => p.id === 'dns_rcode_flows');
+        const hasName = dnsPanels.some(p => p.id === 'dns_name_flows');
         if (hasRCode || hasName) {
           // Total
           const fqTotal: StructuredFlowQuery = {
