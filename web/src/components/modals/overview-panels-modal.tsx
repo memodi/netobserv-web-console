@@ -127,9 +127,7 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
       const defaults = getDefaultOverviewPanels(customIds).filter(p => panels.some(existing => existing.id === p.id));
       setUpdatedPanels(defaults);
     }
-    // Clear generic prefs on any reset
-    setGenericPrefs(defaultGenericPrefs);
-  }, [customIds, panels, activeView, setGenericPrefs]);
+  }, [customIds, panels, activeView]);
 
   const isSaveDisabled = React.useCallback(() => {
     return _.isEmpty(updatedPanels.filter(p => isDisplaySelected(p)));
@@ -200,21 +198,22 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
   }, [panels, setModalOpen]);
 
   const onSave = React.useCallback(() => {
-    // Skip generic prefs computation on reset — prefs already cleared in onReset
+    // On reset, clear generic prefs and skip recomputation
     if (resetClicked) {
+      setGenericPrefs(defaultGenericPrefs);
       setPanels(updatedPanels);
       onClose();
       return;
     }
-    // Compute generic prefs from user's changes to generic panels
-    // These persist across all feature views
+    // Update generic prefs only for panels the user actually toggled
+    const initialMap = new Map(panels.map(p => [p.id, p.isSelected]));
     const newAdded = [...genericPrefs.added];
     const newRemoved = [...genericPrefs.removed];
     let prefsChanged = false;
     for (const panel of updatedPanels) {
-      const panelFeature = getPanelFeature(panel.id);
-      const isGeneric = !panelFeature;
-      if (!isGeneric) continue;
+      if (getPanelFeature(panel.id)) continue; // skip feature panels
+      const wasSelected = initialMap.get(panel.id) ?? false;
+      if (panel.isSelected === wasSelected) continue; // no change
       if (panel.isSelected) {
         const removedIdx = newRemoved.indexOf(panel.id);
         if (removedIdx >= 0) {
@@ -243,7 +242,7 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
 
     setPanels(updatedPanels);
     onClose();
-  }, [setPanels, updatedPanels, onClose, genericPrefs, setGenericPrefs]);
+  }, [resetClicked, setPanels, updatedPanels, onClose, panels, genericPrefs, setGenericPrefs]);
 
   const toggleChip = React.useCallback(
     (key: string) => {

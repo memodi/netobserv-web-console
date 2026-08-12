@@ -103,9 +103,7 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
       );
       setUpdatedColumns(defaults);
     }
-    // Clear generic prefs on any reset
-    setGenericPrefs(defaultGenericPrefs);
-  }, [columns, config.columns, config.fields, activeView, setGenericPrefs]);
+  }, [columns, config.columns, config.fields, activeView]);
 
   const isSaveDisabled = React.useCallback(() => {
     return _.isEmpty(updatedColumns.filter(c => isDisplaySelected(c)));
@@ -176,20 +174,22 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
   const onSave = React.useCallback(() => {
     if (resetClicked) {
       setColumnSizes({});
-      // Skip generic prefs computation — prefs already cleared in onReset
+      // On reset, clear generic prefs and skip recomputation
+      setGenericPrefs(defaultGenericPrefs);
       setColumns(updatedColumns);
       onClose();
       return;
     }
 
-    // Compute generic prefs from user's changes to generic columns
-    // These persist across all feature views
+    // Update generic prefs only for columns the user actually toggled
+    const initialMap = new Map(columns.map(c => [c.id, c.isSelected]));
     const newAdded = [...genericPrefs.added];
     const newRemoved = [...genericPrefs.removed];
     let prefsChanged = false;
     for (const col of updatedColumns) {
-      const isGeneric = !col.feature;
-      if (!isGeneric) continue;
+      if (col.feature) continue; // skip feature columns
+      const wasSelected = initialMap.get(col.id) ?? false;
+      if (col.isSelected === wasSelected) continue; // no change
       if (col.isSelected) {
         const removedIdx = newRemoved.indexOf(col.id);
         if (removedIdx >= 0) {
@@ -218,7 +218,7 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
 
     setColumns(updatedColumns);
     onClose();
-  }, [resetClicked, setColumns, updatedColumns, onClose, setColumnSizes, genericPrefs, setGenericPrefs]);
+  }, [resetClicked, setColumns, updatedColumns, onClose, setColumnSizes, columns, genericPrefs, setGenericPrefs]);
 
   const toggleChip = React.useCallback(
     (key: string) => {
