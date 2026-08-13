@@ -46,7 +46,7 @@ export const ViewSelector: React.FC<ViewSelectorProps> = ({ activeView, setActiv
   return (
     <div id="view-selector-container" data-test="view-selector-container" ref={ref}>
       <Select
-        data-test="view-selector-dropdown"
+        data-test="view-selector-select"
         id="view-selector-dropdown"
         isOpen={isOpen}
         onSelect={onSelect}
