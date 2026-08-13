@@ -427,26 +427,46 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     genericPanelPrefs.removed.forEach(id => expectedPanels.delete(id));
     genericPanelPrefs.added.forEach(id => expectedPanels.add(id));
 
-    // Extract feature-only changes from draft (non-generic columns/panels that differ from preset)
+    // Detect feature-level differences between draft and expected (preset + generic prefs)
     const presetColSet = new Set(preset.columns);
-    const draftFeatureCols = draftView.columns.filter(id => {
+    const draftColSet = new Set(draftView.columns);
+    // Feature columns added to draft (not in preset)
+    const addedFeatureCols = draftView.columns.filter(id => {
       const col = caps.availableColumns.find(c => c.id === id);
       return col?.feature && !presetColSet.has(id);
     });
-    const presetPanelSet = new Set(preset.panels as string[]);
-    const draftFeaturePanels = draftView.panels.filter(id => {
-      return getPanelFeature(id) && !presetPanelSet.has(id);
+    // Feature columns removed from preset (in preset but not in draft)
+    const removedFeatureCols = preset.columns.filter(id => {
+      const col = caps.availableColumns.find(c => c.id === id);
+      return col?.feature && !draftColSet.has(id);
     });
 
-    // Rebuild draft: expected base + feature changes
-    const updatedCols = new Set([...expectedCols, ...draftFeatureCols]);
-    const updatedPanels = new Set([...expectedPanels, ...draftFeaturePanels]);
+    const presetPanelSet = new Set(preset.panels as string[]);
+    const draftPanelSet = new Set(draftView.panels);
+    const addedFeaturePanels = draftView.panels.filter(id => {
+      return getPanelFeature(id) && !presetPanelSet.has(id);
+    });
+    const removedFeaturePanels = (preset.panels as string[]).filter(id => {
+      return getPanelFeature(id) && !draftPanelSet.has(id);
+    });
+
+    const hasFeatureChanges =
+      addedFeatureCols.length > 0 ||
+      removedFeatureCols.length > 0 ||
+      addedFeaturePanels.length > 0 ||
+      removedFeaturePanels.length > 0;
 
     // If no feature changes remain, clear draft entirely
-    if (draftFeatureCols.length === 0 && draftFeaturePanels.length === 0) {
+    if (!hasFeatureChanges) {
       setDraftView(null);
       return;
     }
+
+    // Rebuild draft: expected base + added feature cols - removed feature cols
+    const updatedCols = new Set([...expectedCols, ...addedFeatureCols]);
+    removedFeatureCols.forEach(id => updatedCols.delete(id));
+    const updatedPanels = new Set([...expectedPanels, ...addedFeaturePanels]);
+    removedFeaturePanels.forEach(id => updatedPanels.delete(id));
 
     // Update draft if generic prefs changed its contents
     const colsChanged =
