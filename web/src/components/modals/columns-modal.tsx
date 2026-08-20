@@ -63,17 +63,16 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
     }
   }, [isModalOpen]);
 
+  const prevModalOpen = React.useRef(false);
   React.useEffect(() => {
-    if (resetClicked) return; // Don't overwrite reset state
-    if (isModalOpen || _.isEmpty(updatedColumns)) {
+    const justOpened = isModalOpen && !prevModalOpen.current;
+    prevModalOpen.current = isModalOpen;
+    if (resetClicked) return;
+    if (justOpened || _.isEmpty(updatedColumns)) {
       setUpdatedColumns(_.cloneDeep(columns));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columns, isModalOpen]);
-
-  const isDisplaySelected = React.useCallback((col: Column): boolean => {
-    return col.isSelected;
-  }, []);
 
   const onCheck = React.useCallback(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -106,8 +105,8 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
   }, [columns, config.columns, config.fields, activeView]);
 
   const isSaveDisabled = React.useCallback(() => {
-    return _.isEmpty(updatedColumns.filter(c => isDisplaySelected(c)));
-  }, [updatedColumns, isDisplaySelected]);
+    return _.isEmpty(updatedColumns.filter(c => c.isSelected));
+  }, [updatedColumns]);
 
   const isFilteredColumn = React.useCallback((c: Column, fks: string[]) => {
     return (
@@ -155,8 +154,8 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
 
   const isAllSelected = React.useCallback(() => {
     const filtered = filteredColumns();
-    return filtered.length > 0 && _.reduce(filtered, (acc, c) => (acc = acc && isDisplaySelected(c)), true);
-  }, [filteredColumns, isDisplaySelected]);
+    return filtered.length > 0 && _.reduce(filtered, (acc, c) => (acc = acc && c.isSelected), true);
+  }, [filteredColumns]);
 
   const onSelectAll = React.useCallback(() => {
     const allSelected = isAllSelected();
@@ -240,7 +239,7 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
             <DataListControl>
               <DataListCheck
                 aria-labelledby={'table-column-management-item-' + i}
-                isChecked={isDisplaySelected(column)}
+                isChecked={column.isSelected}
                 id={column.id}
                 onChange={onCheck}
               />

@@ -1,3 +1,4 @@
+import { ViewPresetId } from 'src/model/views';
 import {
   createFilterValue,
   DisabledFilters,
@@ -197,7 +198,7 @@ export const setURLMetricType = (metricType?: MetricType, replace?: boolean) => 
   }
 };
 
-export const setURLView = (viewId: string, replace?: boolean) => {
+export const setURLView = (viewId: ViewPresetId, replace?: boolean) => {
   if (viewId && viewId !== 'all') {
     setURLParam(URLParam.View, viewId, replace);
   } else {

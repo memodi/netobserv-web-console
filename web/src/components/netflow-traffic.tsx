@@ -20,7 +20,14 @@ import {
 import { FetchCallbacks, NetflowContext, NetflowContextValue } from '../model/netflow-context';
 import { getGroupsForScope } from '../model/scope';
 import { DefaultOptions, GraphElementPeer, TopologyOptions } from '../model/topology';
-import { defaultGenericPrefs, DraftView, GenericPrefs, getViewPreset, ViewPresetId } from '../model/views';
+import {
+  defaultGenericPrefs,
+  DraftView,
+  GenericPrefs,
+  getViewPreset,
+  reconcileDraftWithGenericPrefs,
+  ViewPresetId
+} from '../model/views';
 import { Column, ColumnSizeMap } from '../utils/columns';
 import { useConfigValidation } from '../utils/config-validation-hook';
 import { ContextSingleton } from '../utils/context';
@@ -416,70 +423,21 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   // Sync draft with generic prefs changes, or auto-clear if draft matches preset
   React.useEffect(() => {
     if (!draftView) return;
-    const preset = getViewPreset(draftView.baseViewId);
-    if (!preset?.columns || !preset?.panels) return;
-
-    // Compute expected base: preset + generic prefs (without feature changes)
-    const expectedCols = new Set(preset.columns);
-    genericColumnPrefs.removed.forEach(id => expectedCols.delete(id));
-    genericColumnPrefs.added.forEach(id => expectedCols.add(id));
-    const expectedPanels = new Set(preset.panels as string[]);
-    genericPanelPrefs.removed.forEach(id => expectedPanels.delete(id));
-    genericPanelPrefs.added.forEach(id => expectedPanels.add(id));
-
-    // Detect feature-level differences between draft and expected (preset + generic prefs)
-    const presetColSet = new Set(preset.columns);
-    const draftColSet = new Set(draftView.columns);
-    // Feature columns added to draft (not in preset)
-    const addedFeatureCols = draftView.columns.filter(id => {
-      const col = caps.availableColumns.find(c => c.id === id);
-      return col?.feature && !presetColSet.has(id);
-    });
-    // Feature columns removed from preset (in preset but not in draft)
-    const removedFeatureCols = preset.columns.filter(id => {
-      const col = caps.availableColumns.find(c => c.id === id);
-      return col?.feature && !draftColSet.has(id);
-    });
-
-    const presetPanelSet = new Set(preset.panels as string[]);
-    const draftPanelSet = new Set(draftView.panels);
-    const addedFeaturePanels = draftView.panels.filter(id => {
-      return getPanelFeature(id) && !presetPanelSet.has(id);
-    });
-    const removedFeaturePanels = (preset.panels as string[]).filter(id => {
-      return getPanelFeature(id) && !draftPanelSet.has(id);
-    });
-
-    const hasFeatureChanges =
-      addedFeatureCols.length > 0 ||
-      removedFeatureCols.length > 0 ||
-      addedFeaturePanels.length > 0 ||
-      removedFeaturePanels.length > 0;
-
-    // If no feature changes remain, clear draft entirely
-    if (!hasFeatureChanges) {
+    const reconciled = reconcileDraftWithGenericPrefs(
+      draftView,
+      genericColumnPrefs,
+      genericPanelPrefs,
+      caps.availableColumns
+    );
+    if (reconciled === null) {
       setDraftView(null);
-      return;
-    }
-
-    // Rebuild draft: expected base + added feature cols - removed feature cols
-    const updatedCols = new Set([...expectedCols, ...addedFeatureCols]);
-    removedFeatureCols.forEach(id => updatedCols.delete(id));
-    const updatedPanels = new Set([...expectedPanels, ...addedFeaturePanels]);
-    removedFeaturePanels.forEach(id => updatedPanels.delete(id));
-
-    // Update draft if generic prefs changed its contents
-    const colsChanged =
-      updatedCols.size !== draftView.columns.length || !draftView.columns.every(id => updatedCols.has(id));
-    const panelsChanged =
-      updatedPanels.size !== draftView.panels.length || !draftView.panels.every(id => updatedPanels.has(id));
-
-    if (colsChanged || panelsChanged) {
-      setDraftView({
-        ...draftView,
-        columns: Array.from(updatedCols),
-        panels: Array.from(updatedPanels)
-      });
+    } else if (
+      reconciled.columns.length !== draftView.columns.length ||
+      !draftView.columns.every(id => reconciled.columns.includes(id)) ||
+      reconciled.panels.length !== draftView.panels.length ||
+      !draftView.panels.every(id => reconciled.panels.includes(id))
+    ) {
+      setDraftView(reconciled);
     }
   }, [draftView, genericColumnPrefs, genericPanelPrefs, caps.availableColumns]);
 

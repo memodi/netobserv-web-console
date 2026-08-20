@@ -119,26 +119,6 @@ export function getLocalStorage<T>(key: string, initialValue?: T, opts?: ArraySe
   }
 }
 
-export function setLocalStorage<T>(key: string, value: T, opts?: ArraySelectionOptions) {
-  try {
-    const item = window.localStorage.getItem(localStoragePluginKey);
-    const parsedItem = item ? JSON.parse(item) : {};
-    if (opts) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      parsedItem[key] = (value as any[])
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .filter((item: any) => item[opts.criteria])
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((item: any) => item[opts.id]);
-    } else {
-      parsedItem[key] = value;
-    }
-    window.localStorage.setItem(localStoragePluginKey, JSON.stringify(parsedItem));
-  } catch (error) {
-    console.error(error);
-  }
-}
-
 export function clearLocalStorage() {
   try {
     console.info('clearing local storage ' + localStoragePluginKey);

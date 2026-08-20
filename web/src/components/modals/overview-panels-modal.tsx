@@ -18,12 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { Feature } from '../../model/config';
 import { RecordType } from '../../model/flow-query';
 import { defaultGenericPrefs, GenericPrefs, getViewPreset, ViewPresetId } from '../../model/views';
-import {
-  getAvailablePanels,
-  getOverviewPanelInfo,
-  getPanelFeature,
-  OverviewPanel
-} from '../../utils/overview-panels';
+import { getAvailablePanels, getOverviewPanelInfo, getPanelFeature, OverviewPanel } from '../../utils/overview-panels';
 import Modal, { ensureRootElement } from './modal';
 import './overview-panels-modal.css';
 
@@ -69,17 +64,16 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
     }
   }, [isModalOpen]);
 
+  const prevModalOpen = React.useRef(false);
   React.useEffect(() => {
-    if (resetClicked) return; // Don't overwrite reset state
-    if (isModalOpen || _.isEmpty(updatedPanels)) {
+    const justOpened = isModalOpen && !prevModalOpen.current;
+    prevModalOpen.current = isModalOpen;
+    if (resetClicked) return;
+    if (justOpened || _.isEmpty(updatedPanels)) {
       setUpdatedPanels(_.cloneDeep(panels));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen, panels]);
-
-  const isDisplaySelected = React.useCallback((panel: OverviewPanel): boolean => {
-    return panel.isSelected;
-  }, []);
 
   const getFilterKeys = React.useCallback(() => {
     let panelFilterKeys = ['total', 'bar', 'donut', 'line'];
@@ -130,8 +124,8 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
   }, [customIds, panels, activeView]);
 
   const isSaveDisabled = React.useCallback(() => {
-    return _.isEmpty(updatedPanels.filter(p => isDisplaySelected(p)));
-  }, [updatedPanels, isDisplaySelected]);
+    return _.isEmpty(updatedPanels.filter(p => p.isSelected));
+  }, [updatedPanels]);
 
   const isFilteredPanel = React.useCallback(
     (p: OverviewPanel) => {
@@ -181,8 +175,8 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
 
   const isAllSelected = React.useCallback(() => {
     const filtered = filteredPanels();
-    return filtered.length > 0 && _.reduce(filtered, (acc, p) => (acc = acc && isDisplaySelected(p)), true);
-  }, [filteredPanels, isDisplaySelected]);
+    return filtered.length > 0 && _.reduce(filtered, (acc, p) => (acc = acc && p.isSelected), true);
+  }, [filteredPanels]);
 
   const onSelectAll = React.useCallback(() => {
     const allSelected = isAllSelected();
@@ -270,7 +264,7 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
             <DataListControl>
               <DataListCheck
                 aria-labelledby={'overview-panel-management-item-' + i}
-                isChecked={isDisplaySelected(panel)}
+                isChecked={panel.isSelected}
                 id={panel.id}
                 data-test={`overview-panel-checkbox-${panel.id}`}
                 onChange={onCheck}
