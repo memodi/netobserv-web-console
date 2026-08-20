@@ -48,14 +48,15 @@ frontend:
   #  - heartbeat
   #  - endConnection
   features:
-    - pktDrop
-    - dnsTracking
-    - flowRTT
-    - packetTranslation
-    - networkEvents
-    - tlsTracking
-    - udnMapping
-  # processor features: multiCluster, zones
+  # eBPF agent features
+  #  - pktDrop
+  #  - dnsTracking
+  #  - flowRTT
+  #  - multiNetworks
+  #  - packetTranslation
+  # processor features
+  #  - multiCluster
+  #  - zones
   portNaming:
     enable: true
     portNames:
