@@ -74,6 +74,7 @@ import {
   getRangeFromURL,
   getRecordTypeFromURL,
   getShowDupFromURL,
+  getViewFromURL,
   setURLFilters
 } from '../utils/router';
 import { useTheme } from '../utils/theme-hook';
@@ -161,7 +162,17 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   );
   const [columns, setColumns] = useLocalStorage<Column[]>(localStorageColsKey, [], defaultArraySelectionOptions);
   const [_columnSizes, setColumnSizes] = useLocalStorage<ColumnSizeMap>(localStorageColsSizesKey, {});
-  const [activeView, setActiveView] = useLocalStorage<ViewPresetId>(localStorageActiveViewKey, 'all');
+  const urlView = getViewFromURL();
+  const [activeView, setActiveView] = useLocalStorage<ViewPresetId>(localStorageActiveViewKey, urlView);
+
+  // URL view param takes priority over localStorage on initial load
+  const urlViewApplied = React.useRef(false);
+  React.useEffect(() => {
+    if (!urlViewApplied.current && urlView !== 'all' && urlView !== activeView) {
+      setActiveView(urlView);
+    }
+    urlViewApplied.current = true;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [genericColumnPrefs, setGenericColumnPrefs] = useLocalStorage<GenericPrefs>(
     localStorageGenericColumnPrefsKey,
     defaultGenericPrefs

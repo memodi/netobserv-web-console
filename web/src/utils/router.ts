@@ -198,6 +198,10 @@ export const setURLMetricType = (metricType?: MetricType, replace?: boolean) => 
   }
 };
 
+export const getViewFromURL = (): ViewPresetId => {
+  return (getURLParam(URLParam.View) as ViewPresetId | null) || 'all';
+};
+
 export const setURLView = (viewId: ViewPresetId, replace?: boolean) => {
   if (viewId && viewId !== 'all') {
     setURLParam(URLParam.View, viewId, replace);

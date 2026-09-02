@@ -202,10 +202,8 @@ export const reconcileDraftWithGenericPrefs = (
   const expectedColArr = [...expectedCols];
   const expectedPanelArr = [...expectedPanels];
   const hasOrderChange =
-    (draft.columns.length === expectedColArr.length &&
-      draft.columns.some((id, i) => id !== expectedColArr[i])) ||
-    (draft.panels.length === expectedPanelArr.length &&
-      draft.panels.some((id, i) => id !== expectedPanelArr[i]));
+    (draft.columns.length === expectedColArr.length && draft.columns.some((id, i) => id !== expectedColArr[i])) ||
+    (draft.panels.length === expectedPanelArr.length && draft.panels.some((id, i) => id !== expectedPanelArr[i]));
 
   if (!hasFeatureChanges && !hasOrderChange) return null;
 
