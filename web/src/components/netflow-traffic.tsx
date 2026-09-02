@@ -346,6 +346,11 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
         updateTopologyMetricType(savedMetricType.current);
         return;
       }
+      // Use draft's metric type if draft belongs to this view, otherwise use preset metric
+      if (draftView && draftView.baseViewId === viewId && draftView.topologyMetricType) {
+        updateTopologyMetricType(draftView.topologyMetricType);
+        return;
+      }
       const preset = getViewPreset(viewId);
       if (!preset) {
         return;
@@ -354,7 +359,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
         updateTopologyMetricType(preset.topologyMetricType);
       }
     },
-    [setActiveView, updateTopologyMetricType]
+    [setActiveView, updateTopologyMetricType, draftView]
   );
 
   const setColumnsWithDraft = React.useCallback(
@@ -415,8 +420,15 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   }, [draftView, genericColumnPrefs, genericPanelPrefs, caps.availableColumns]);
 
   const onDiscardDraft = React.useCallback(() => {
+    // Restore preset metric before clearing draft
+    if (draftView) {
+      const preset = getViewPreset(draftView.baseViewId);
+      if (preset?.topologyMetricType) {
+        updateTopologyMetricType(preset.topologyMetricType);
+      }
+    }
     setDraftView(null);
-  }, []);
+  }, [draftView, updateTopologyMetricType]);
 
   const resetDefaultFilters = React.useCallback(() => {
     applyView('all');
