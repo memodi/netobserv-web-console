@@ -61,7 +61,7 @@ import {
 } from '../utils/local-storage-hook';
 import { useConfigCapabilities } from '../utils/netflow-capabilities-hook';
 import { InitState, useDataFetching } from '../utils/netflow-fetching-hook';
-import { getPanelFeature, OverviewPanel } from '../utils/overview-panels';
+import { OverviewPanel } from '../utils/overview-panels';
 import {
   defaultMetricFunction,
   defaultMetricScope,
@@ -352,35 +352,16 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
         setColumns(newColumns);
         return;
       }
-      // Feature view: merge preset + user selections, create draft only if feature columns differ
-      const preset = getViewPreset(activeView);
-      const presetColIds = new Set(preset?.columns ?? []);
-      const presetColSet = new Set(caps.selectedColumns.map(c => c.id as string));
-      const userSelectedIds = newColumns.filter(c => c.isSelected).map(c => c.id as string);
-      const mergedColIds = new Set([...presetColSet, ...userSelectedIds]);
-      const uncheckedIds = new Set(newColumns.filter(c => !c.isSelected).map(c => c.id as string));
-      uncheckedIds.forEach(id => mergedColIds.delete(id));
-
-      // Check if any non-generic (feature) columns differ from preset
-      const hasFeatureChanges = newColumns.some(c => {
-        if (!c.feature) return false; // generic — handled by generic prefs
-        const inPreset = presetColIds.has(c.id);
-        return c.isSelected !== inPreset;
-      });
-
-      if (hasFeatureChanges) {
-        setDraftView(prev => ({
-          baseViewId: activeView,
-          columns: Array.from(mergedColIds),
-          panels: prev?.panels ?? caps.selectedPanels.map(p => p.id as string),
-          topologyMetricType: prev?.topologyMetricType ?? topologyMetricType
-        }));
-      } else {
-        // Only clear draft if editing the same view the draft belongs to
-        setDraftView(prev => (prev?.baseViewId === activeView ? null : prev));
-      }
+      // Feature view: build ordered column list from selection
+      const selectedIds = newColumns.filter(c => c.isSelected).map(c => c.id as string);
+      setDraftView(prev => ({
+        baseViewId: activeView,
+        columns: selectedIds,
+        panels: prev?.panels ?? caps.selectedPanels.map(p => p.id as string),
+        topologyMetricType: prev?.topologyMetricType ?? topologyMetricType
+      }));
     },
-    [setColumns, activeView, caps.selectedColumns, caps.selectedPanels, topologyMetricType]
+    [setColumns, activeView, caps.selectedPanels, topologyMetricType]
   );
 
   const setPanelsWithDraft = React.useCallback(
@@ -389,35 +370,16 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
         setPanels(newPanels);
         return;
       }
-      // Feature view: merge preset + user selections, create draft only if feature panels differ
-      const preset = getViewPreset(activeView);
-      const presetPanelIds = new Set((preset?.panels ?? []) as string[]);
-      const presetPanelSet = new Set(caps.selectedPanels.map(p => p.id as string));
-      const userSelectedIds = newPanels.filter(p => p.isSelected).map(p => p.id as string);
-      const mergedPanelIds = new Set([...presetPanelSet, ...userSelectedIds]);
-      const uncheckedIds = new Set(newPanels.filter(p => !p.isSelected).map(p => p.id as string));
-      uncheckedIds.forEach(id => mergedPanelIds.delete(id));
-
-      // Check if any non-generic (feature) panels differ from preset
-      const hasFeatureChanges = newPanels.some(p => {
-        if (!getPanelFeature(p.id)) return false; // generic — handled by generic prefs
-        const inPreset = presetPanelIds.has(p.id);
-        return p.isSelected !== inPreset;
-      });
-
-      if (hasFeatureChanges) {
-        setDraftView(prev => ({
-          baseViewId: activeView,
-          columns: prev?.columns ?? caps.selectedColumns.map(c => c.id as string),
-          panels: Array.from(mergedPanelIds),
-          topologyMetricType: prev?.topologyMetricType ?? topologyMetricType
-        }));
-      } else {
-        // Only clear draft if editing the same view the draft belongs to
-        setDraftView(prev => (prev?.baseViewId === activeView ? null : prev));
-      }
+      // Feature view: build ordered panel list from modal selection
+      const selectedIds = newPanels.filter(p => p.isSelected).map(p => p.id as string);
+      setDraftView(prev => ({
+        baseViewId: activeView,
+        columns: prev?.columns ?? caps.selectedColumns.map(c => c.id as string),
+        panels: selectedIds,
+        topologyMetricType: prev?.topologyMetricType ?? topologyMetricType
+      }));
     },
-    [setPanels, activeView, caps.selectedColumns, caps.selectedPanels, topologyMetricType]
+    [setPanels, activeView, caps.selectedColumns, topologyMetricType]
   );
 
   // Sync draft with generic prefs changes, or auto-clear if draft matches preset
@@ -748,7 +710,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
             setOverviewFocus={setOverviewFocus}
             flows={flows}
             selectedRecord={_selectedRecord}
-            setColumns={setColumns}
+            setColumns={setColumnsWithDraft}
             columnSizes={_columnSizes}
             setColumnSizes={setColumnSizes}
             size={size}

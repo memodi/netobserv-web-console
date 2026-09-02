@@ -198,17 +198,38 @@ export const reconcileDraftWithGenericPrefs = (
     addedFeaturePanels.length > 0 ||
     removedFeaturePanels.length > 0;
 
-  if (!hasFeatureChanges) return null;
+  // Check if draft order differs from expected (reorder-only drafts)
+  const expectedColArr = [...expectedCols];
+  const expectedPanelArr = [...expectedPanels];
+  const hasOrderChange =
+    (draft.columns.length === expectedColArr.length &&
+      draft.columns.some((id, i) => id !== expectedColArr[i])) ||
+    (draft.panels.length === expectedPanelArr.length &&
+      draft.panels.some((id, i) => id !== expectedPanelArr[i]));
 
-  // Rebuild draft: expected base + feature changes
-  const updatedCols = new Set([...expectedCols, ...addedFeatureCols]);
-  removedFeatureCols.forEach(id => updatedCols.delete(id));
-  const updatedPanels = new Set([...expectedPanels, ...addedFeaturePanels]);
-  removedFeaturePanels.forEach(id => updatedPanels.delete(id));
+  if (!hasFeatureChanges && !hasOrderChange) return null;
+
+  // Rebuild draft preserving order: start from draft order, add missing expected, remove deleted
+  const removedColSet = new Set(removedFeatureCols);
+  const updatedColSet = new Set([...expectedCols, ...addedFeatureCols]);
+  removedColSet.forEach(id => updatedColSet.delete(id));
+  // Keep draft order for existing columns, append any new ones from generic prefs
+  const updatedCols = draft.columns.filter(id => updatedColSet.has(id));
+  updatedColSet.forEach(id => {
+    if (!updatedCols.includes(id)) updatedCols.push(id);
+  });
+
+  const removedPanelSet = new Set(removedFeaturePanels);
+  const updatedPanelSet = new Set([...expectedPanels, ...addedFeaturePanels]);
+  removedPanelSet.forEach(id => updatedPanelSet.delete(id));
+  const updatedPanels = draft.panels.filter(id => updatedPanelSet.has(id));
+  updatedPanelSet.forEach(id => {
+    if (!updatedPanels.includes(id)) updatedPanels.push(id);
+  });
 
   return {
     ...draft,
-    columns: Array.from(updatedCols),
-    panels: Array.from(updatedPanels)
+    columns: updatedCols,
+    panels: updatedPanels
   };
 };

@@ -211,8 +211,8 @@ export function useConfigCapabilities(params: {
   const selectedColumns = React.useMemo(() => {
     // Draft view overrides when viewing the draft's base view
     if (draftView && draftView.baseViewId === activeView) {
-      const draftColIds = new Set(draftView.columns);
-      return availableColumns.filter(col => draftColIds.has(col.id));
+      const colMap = new Map(availableColumns.map(col => [col.id as string, col]));
+      return draftView.columns.map(id => colMap.get(id)).filter((col): col is Column => col !== undefined);
     }
     // Feature preset view: preset columns + generic prefs
     if (activeView !== 'all') {
