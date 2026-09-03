@@ -33,6 +33,7 @@ export interface ColumnsModalProps {
   activeView: ViewPresetId;
   genericPrefs: GenericPrefs;
   setGenericPrefs: (v: GenericPrefs) => void;
+  onReset?: () => void;
   id?: string;
 }
 
@@ -46,7 +47,8 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
   setColumnSizes,
   activeView,
   genericPrefs,
-  setGenericPrefs
+  setGenericPrefs,
+  onReset: onResetCallback
 }) => {
   React.useEffect(() => {
     ensureRootElement();
@@ -90,11 +92,17 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
   const onReset = React.useCallback(() => {
     setResetClicked(true);
     if (activeView !== 'all') {
-      // Feature view: reset to preset's columns
+      // Feature view: reset to preset's columns in preset order
       const preset = getViewPreset(activeView);
-      const presetColIds = new Set(preset?.columns ?? []);
-      const resetColumns = columns.map(c => ({ ...c, isSelected: presetColIds.has(c.id) }));
-      setUpdatedColumns(resetColumns);
+      const presetColIds = (preset?.columns as string[]) ?? [];
+      const colMap = new Map(columns.map(c => [c.id as string, c]));
+      const resetColumns = presetColIds
+        .map(id => colMap.get(id as string))
+        .filter((c): c is Column => c !== undefined)
+        .map(c => ({ ...c, isSelected: true }));
+      // Add non-preset columns as unselected at the end
+      const nonPresetCols = columns.filter(c => !presetColIds.includes(c.id as string));
+      setUpdatedColumns([...resetColumns, ...nonPresetCols.map(c => ({ ...c, isSelected: false }))]);
     } else {
       // "All Traffic": reset to config defaults
       const defaults = getDefaultColumns(config.columns, config.fields).filter(c =>
@@ -176,6 +184,7 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
       // On reset, clear generic prefs and skip recomputation
       setGenericPrefs(defaultGenericPrefs);
       setColumns(updatedColumns);
+      onResetCallback?.();
       onClose();
       return;
     }
@@ -217,7 +226,7 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
 
     setColumns(updatedColumns);
     onClose();
-  }, [resetClicked, setColumns, updatedColumns, onClose, setColumnSizes, columns, genericPrefs, setGenericPrefs]);
+  }, [resetClicked, setColumns, updatedColumns, onClose, setColumnSizes, columns, genericPrefs, setGenericPrefs, onResetCallback]);
 
   const toggleChip = React.useCallback(
     (key: string) => {

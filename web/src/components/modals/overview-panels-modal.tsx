@@ -111,11 +111,17 @@ export const OverviewPanelsModal: React.FC<OverviewPanelsModalProps> = ({
   const onReset = React.useCallback(() => {
     setResetClicked(true);
     if (activeView !== 'all') {
-      // Feature view: reset to preset's panels
+      // Feature view: reset to preset's panels in preset order
       const preset = getViewPreset(activeView);
-      const presetPanelIds = new Set(preset?.panels ?? []);
-      const resetPanels = panels.map(p => ({ ...p, isSelected: presetPanelIds.has(p.id) }));
-      setUpdatedPanels(resetPanels);
+      const presetPanelIds = (preset?.panels as string[]) ?? [];
+      const panelMap = new Map(panels.map(p => [p.id as string, p]));
+      const resetPanels = presetPanelIds
+        .map(id => panelMap.get(id as string))
+        .filter((p): p is OverviewPanel => p !== undefined)
+        .map(p => ({ ...p, isSelected: true }));
+      // Add non-preset panels as unselected at the end
+      const nonPresetPanels = panels.filter(p => !presetPanelIds.includes(p.id as string));
+      setUpdatedPanels([...resetPanels, ...nonPresetPanels.map(p => ({ ...p, isSelected: false }))]);
     } else {
       // "All Traffic" or custom view: reset to config defaults
       const defaults = getAvailablePanels(customIds).filter(p => panels.some(existing => existing.id === p.id));

@@ -32,6 +32,7 @@ export interface ModalsProps {
   setGenericColumnPrefs: (v: GenericPrefs) => void;
   genericPanelPrefs: GenericPrefs;
   setGenericPanelPrefs: (v: GenericPrefs) => void;
+  onColumnsReset?: () => void;
 }
 
 export const Modals: React.FC<ModalsProps> = props => {
@@ -89,6 +90,7 @@ export const Modals: React.FC<ModalsProps> = props => {
         activeView={props.activeView}
         genericPrefs={props.genericColumnPrefs}
         setGenericPrefs={props.setGenericColumnPrefs}
+        onReset={props.onColumnsReset}
       />
       <ExportModal
         id="export-modal"

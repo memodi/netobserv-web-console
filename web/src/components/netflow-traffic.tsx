@@ -431,6 +431,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
   }, [draftView, updateTopologyMetricType]);
 
   const resetDefaultFilters = React.useCallback(() => {
+    setDraftView(null);
     applyView('all');
     updateTableFilters({ match: filters.match, list: caps.defaultFilters });
   }, [filters.match, caps.defaultFilters, updateTableFilters, applyView]);
@@ -787,6 +788,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
             setGenericColumnPrefs={setGenericColumnPrefs}
             genericPanelPrefs={genericPanelPrefs}
             setGenericPanelPrefs={setGenericPanelPrefs}
+            onColumnsReset={() => setDraftView(null)}
           />
         )}
         <GuidedTourPopover id="netobserv" ref={guidedTourRef} isDark={isDarkTheme} />

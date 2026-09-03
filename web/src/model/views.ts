@@ -199,13 +199,17 @@ export const reconcileDraftWithGenericPrefs = (
     removedFeaturePanels.length > 0;
 
   // Check if draft order differs from expected (reorder-only drafts)
-  const expectedColArr = [...expectedCols];
-  const expectedPanelArr = [...expectedPanels];
-  const hasOrderChange =
-    (draft.columns.length === expectedColArr.length && draft.columns.some((id, i) => id !== expectedColArr[i])) ||
-    (draft.panels.length === expectedPanelArr.length && draft.panels.some((id, i) => id !== expectedPanelArr[i]));
+  // Compare against preset order (not Set order which is undefined)
+  const presetCols = preset.columns || [];
+  const presetPanels = (preset.panels as string[]) || [];
+  const colsMatch = draft.columns.length === presetCols.length && !draft.columns.some((id, i) => id !== presetCols[i]);
+  const panelsMatch = draft.panels.length === presetPanels.length && !draft.panels.some((id, i) => id !== presetPanels[i]);
+  const hasOrderChange = !colsMatch || !panelsMatch;
 
-  if (!hasFeatureChanges && !hasOrderChange) return null;
+  // Clear draft if: no feature changes AND no order change
+  if (!hasFeatureChanges && !hasOrderChange) {
+    return null;
+  }
 
   // Rebuild draft preserving order: start from draft order, add missing expected, remove deleted
   const removedColSet = new Set(removedFeatureCols);
