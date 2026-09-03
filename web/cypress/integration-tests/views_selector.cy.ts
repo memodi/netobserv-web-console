@@ -50,6 +50,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         Operator.install()
         cy.checkStorageClass(this)
         Operator.createFlowcollector("AllFeatures")
+
     })
 
     beforeEach('view selector test', function () {
@@ -86,25 +87,25 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
 
         cy.get(viewSelectors.dropdown).click()
         cy.get(viewSelectors.dnsLatency).click()
-        
+
         cy.get(viewSelectors.dropdown).should('contain.text', 'DNS Latency')
         cy.checkPanel(dnsPanels)
 
         cy.get(viewSelectors.dropdown).click()
         cy.get(viewSelectors.flowRTT).click()
-        
+
         cy.get(viewSelectors.dropdown).should('contain.text', 'Flow RTT')
         cy.checkPanel(rttPanels)
 
         cy.get(viewSelectors.dropdown).click()
         cy.get(viewSelectors.tlsTracking).click()
-        
+
         cy.get(viewSelectors.dropdown).should('contain.text', 'TLS Tracking')
         cy.checkPanel(tlsPanels)
 
         cy.get(viewSelectors.dropdown).click()
         cy.get(viewSelectors.allTraffic).click()
-        
+
         cy.get(viewSelectors.dropdown).should('contain.text', 'All Traffic')
         cy.checkPanel(overviewSelectors.defaultPanels)
 
@@ -164,11 +165,11 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
 
         // Add generic column (DSCP — no feature, not default) on DNS view → no draft
         cy.openColumnsModal()
-        cy.get(`${colSelectors.dscp}[type="checkbox"]`).check()
+        cy.get(`${colSelectors.dscp}[type="checkbox"]`).check({ force: true })
         cy.byTestID(colSelectors.save).click()
 
-        // No "Custom" prefix — generic change, no draft
-        cy.get(viewSelectors.dropdown).should('not.contain.text', 'Custom')
+        // "Custom" prefix — generic change
+        cy.get(viewSelectors.dropdown).should('contain.text', 'Custom')
 
         // Verify DSCP column shows on DNS view
         cy.byTestID('table-composable').within(() => {
@@ -200,8 +201,8 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         cy.byTestID(`overview-panel-checkbox-${genericPanel}`).check()
         cy.byTestID('panels-save-button').click()
 
-        // No "Custom" prefix — generic change, no draft
-        cy.get(viewSelectors.dropdown).should('not.contain.text', 'Custom')
+        // generic change, create draft
+        cy.get(viewSelectors.dropdown).should('contain.text', 'Custom')
 
         // Generic panel shows on DNS view
         cy.get('#overview-flex').contains(genericPanelTitle).should('exist')
@@ -226,8 +227,8 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         cy.get(`${colSelectors.srcNS}[type="checkbox"]`).uncheck()
         cy.byTestID(colSelectors.save).click()
 
-        // No draft — generic change
-        cy.get(viewSelectors.dropdown).should('not.contain.text', 'Custom')
+        // generic change - draft
+        cy.get(viewSelectors.dropdown).should('contain.text', 'Custom')
 
         // srcNS hidden on DNS view
         cy.byTestID('table-composable').within(() => {
@@ -263,8 +264,8 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         cy.byTestID(`overview-panel-checkbox-${genericPanel}`).uncheck()
         cy.byTestID(overviewSelectors.save).click()
 
-        // No draft — generic change
-        cy.get(viewSelectors.dropdown).should('not.contain.text', 'Custom')
+        // generic change - draft is created
+        cy.get(viewSelectors.dropdown).should('contain.text', 'Custom')
 
         // Generic panel hidden on DNS view
         cy.get('#overview-flex').contains(genericPanelTitle).should('not.exist')
@@ -377,7 +378,6 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         cy.get('#tabs-container').contains('Overview').click()
         cy.get(viewSelectors.dropdown).click()
         cy.get(viewSelectors.dnsLatency).click()
-        
 
         cy.openPanelsModal()
         // Uncheck a DNS preset panel
@@ -439,7 +439,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         // All Traffic — default metric: Bytes
         cy.get(viewSelectors.dropdown).click()
         cy.get(viewSelectors.allTraffic).click()
-        
+
         cy.byTestID("show-view-options-button").should('exist').click()
         cy.contains('Display options').should('exist').click()
         cy.byTestID(topologySelectors.metricTypeDrop).should('contain.text', 'Bytes')
@@ -501,7 +501,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
 
         // Page refresh
         cy.reload()
-        
+
         // Navigate back to DNS view
         cy.get('#tabs-container').contains('Traffic flows').click()
         netflowPage.stopAutoRefresh()
@@ -525,6 +525,37 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         cy.openColumnsModal()
         cy.byTestID(colSelectors.resetDefault).click()
         cy.byTestID(colSelectors.save).click()
+    })
+
+    it("(OCP-XXXXX, memodi) should clear draft when clicking 'Restore default columns'", function () {
+        cy.get('#tabs-container').contains('Traffic flows').click()
+        cy.byTestID("table-composable").should('exist')
+        netflowPage.stopAutoRefresh()
+
+        // Select DNS view
+        cy.get(viewSelectors.dropdown).click()
+        cy.get(viewSelectors.dnsLatency).click()
+        cy.get(viewSelectors.dropdown).should('contain.text', 'DNS Latency')
+
+        // Reorder columns to create draft
+        cy.openColumnsModal()
+        cy.byTestID('table-column-management').within(() => {
+            // Drag first column to different position (creates reorder draft)
+            cy.get('[id="data-0"]').trigger('mousedown')
+            cy.get('[id="data-3"]').trigger('mouseover').trigger('mouseup')
+        })
+        cy.byTestID('columns-save-button').click()
+
+        // Verify "Custom" label present (draft exists)
+        cy.get(viewSelectors.dropdown).should('contain.text', 'Custom')
+
+        // Click "Restore default columns"
+        cy.openColumnsModal()
+        cy.byTestID('columns-reset-button').click()
+        cy.byTestID('columns-save-button').click()
+
+        // Verify "Custom" label gone (draft cleared)
+        cy.get(viewSelectors.dropdown).should('contain.text', 'DNS Latency').and('not.contain.text', 'Custom')
     })
 
     afterEach("test", function () {
