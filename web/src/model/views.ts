@@ -203,7 +203,8 @@ export const reconcileDraftWithGenericPrefs = (
   const presetCols = preset.columns || [];
   const presetPanels = (preset.panels as string[]) || [];
   const colsMatch = draft.columns.length === presetCols.length && !draft.columns.some((id, i) => id !== presetCols[i]);
-  const panelsMatch = draft.panels.length === presetPanels.length && !draft.panels.some((id, i) => id !== presetPanels[i]);
+  const panelsMatch =
+    draft.panels.length === presetPanels.length && !draft.panels.some((id, i) => id !== presetPanels[i]);
   const hasOrderChange = !colsMatch || !panelsMatch;
 
   // Clear draft if: no feature changes AND no order change

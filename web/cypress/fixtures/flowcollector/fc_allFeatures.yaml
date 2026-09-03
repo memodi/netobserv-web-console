@@ -24,7 +24,7 @@ spec:
       installDemoLoki: true
   processor:
     metrics:
-      includeList:
+      additionalIncludeList:
         - node_ingress_packets_total
         - node_egress_packets_total
         - namespace_ingress_packets_total

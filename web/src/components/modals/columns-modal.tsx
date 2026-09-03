@@ -226,7 +226,17 @@ export const ColumnsModal: React.FC<ColumnsModalProps> = ({
 
     setColumns(updatedColumns);
     onClose();
-  }, [resetClicked, setColumns, updatedColumns, onClose, setColumnSizes, columns, genericPrefs, setGenericPrefs, onResetCallback]);
+  }, [
+    resetClicked,
+    setColumns,
+    updatedColumns,
+    onClose,
+    setColumnSizes,
+    columns,
+    genericPrefs,
+    setGenericPrefs,
+    onResetCallback
+  ]);
 
   const toggleChip = React.useCallback(
     (key: string) => {
