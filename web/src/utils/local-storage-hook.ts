@@ -119,6 +119,18 @@ export function getLocalStorage<T>(key: string, initialValue?: T, opts?: ArraySe
   }
 }
 
+export function setLocalStorage<T>(key: string, value: T) {
+  try {
+    const item = window.localStorage.getItem(localStoragePluginKey);
+    const parsedItem = item ? JSON.parse(item) : {};
+    parsedItem[key] = value;
+    window.localStorage.setItem(localStoragePluginKey, JSON.stringify(parsedItem));
+  } catch (error) {
+    console.error(error);
+    clearLocalStorage();
+  }
+}
+
 export function clearLocalStorage() {
   try {
     console.info('clearing local storage ' + localStoragePluginKey);
