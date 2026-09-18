@@ -198,7 +198,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
 
         // Add generic panel (top_avg_byte_rates not in DNS preset) on DNS view
         cy.openPanelsModal()
-        cy.byTestID(`overview-panel-checkbox-${genericPanel}`).check()
+        cy.get(`input[id=${genericPanel}]`).check()
         cy.byTestID('panels-save-button').click()
 
         // generic change, create draft
@@ -257,11 +257,11 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
 
         // Add generic panel first (so it's in prefs) then remove it
         cy.openPanelsModal()
-        cy.byTestID(`overview-panel-checkbox-${genericPanel}`).check()
+        cy.get(`input[id=${genericPanel}]`).check()
         cy.byTestID(overviewSelectors.save).click()
 
         cy.openPanelsModal()
-        cy.byTestID(`overview-panel-checkbox-${genericPanel}`).uncheck()
+        cy.get(`input[id=${genericPanel}]`).uncheck()
         cy.byTestID(overviewSelectors.save).click()
 
         // generic change - draft is created
@@ -381,7 +381,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
 
         cy.openPanelsModal()
         // Uncheck a DNS preset panel
-        cy.byTestID('overview-panel-checkbox-top_avg_dns_latency').uncheck()
+        cy.get('input[id=top_avg_dns_latency]').uncheck()
         cy.byTestID(overviewSelectors.save).click()
 
         // Draft created — toggle shows "Custom"
