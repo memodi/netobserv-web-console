@@ -1,39 +1,11 @@
 import { colSelectors, netflowPage, overviewSelectors, topologySelectors, viewSelectors } from "@views/netflow-page"
 import { Operator } from "@views/netobserv"
 
-// Expected panels per view (text visible in overview panel titles)
-const pktDropPanels = [
-    'Top 5 average dropped packets rates',
-    'Top 5 dropped packets rates stacked with total',
-    'Top 5 packet dropped state stacked with total',
-    'Top 5 packet dropped cause stacked with total',
-    'Top 5 average dropped bytes rates',
-    'Top 5 dropped bytes rates stacked with total'
-]
-
-const dnsPanels = [
-    'Top 5 average DNS latencies with overall',
-    'Top 5 90th percentile DNS latencies',
-    'Top 5 99th percentile DNS latencies',
-    'Top 5 maximum DNS latencies',
-    'Top 5 DNS name',
-    'Top 5 DNS response code'
-]
-
-const rttPanels = [
-    'Top 5 average TCP smoothed Round Trip Time with overall',
-    'Top 5 90th percentile TCP smoothed Round Trip Time',
-    'Top 5 99th percentile TCP smoothed Round Trip Time',
-    'Top 5 maximum TCP smoothed Round Trip Time',
-    'Bottom 5 minimum TCP smoothed Round Trip Time'
-]
-
-const tlsPanels = [
-    'TLS usage',
-    'TLS per version',
-    'TLS per group',
-    'TLS per cipher suite'
-]
+// Feature view preset panels — shared with overviewSelectors (aligned to views.ts)
+const pktDropPanels = overviewSelectors.defaultPacketDropPanels
+const dnsPanels = overviewSelectors.defaultDNSTrackingPanels
+const rttPanels = overviewSelectors.defaultFlowRTTPanels
+const tlsPanels = overviewSelectors.defaultTLSTrackingPanels
 
 // Generic panel not in any feature preset but default-selected on All Traffic
 const genericPanel = 'top_avg_byte_rates'
