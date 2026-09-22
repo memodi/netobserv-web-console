@@ -440,15 +440,16 @@ export namespace overviewSelectors {
     ]
     export const allPanels = defaultPanels.concat(['Top 5 average packets rates', 'Top 5 packets rates'])
     // After "Select all" on a feature-only FC, generic rate panels are also selected
-    export const allPacketDropPanels = defaultPacketDropPanels
     export const allDNSTrackingPanels = defaultDNSTrackingPanels.concat(['Bottom 5 minimum DNS latencies'])
-    export const allFlowRTTPanels = defaultFlowRTTPanels
     export const allTLSTrackingPanels = [
         'TLS usage (network flows per second)',
         'TLS per version (network flows per second)',
         'TLS per group (network flows per second)',
         'TLS per cipher suite (network flows per second)'
     ]
+    // all packet drop panels and flowRTT panels are displayed by default
+    export const allPacketDropPanels = defaultPacketDropPanels
+    export const allFlowRTTPanels = defaultFlowRTTPanels
 }
 
 export const loadTimes = {

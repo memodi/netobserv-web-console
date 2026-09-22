@@ -11,7 +11,7 @@ const tlsPanels = overviewSelectors.defaultTLSTrackingPanels
 const genericPanel = 'top_avg_byte_rates'
 const genericPanelTitle = 'Top 5 average bytes rates'
 
-describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }, function () {
+describe('(NETOBSERV-2872) Views selector tests', { tags: ['Network_Observability'] }, function () {
 
     before('any test', function () {
         cy.env(['LOGIN_IDP', 'LOGIN_USERNAME', 'LOGIN_PASSWORD']).then(({ LOGIN_IDP, LOGIN_USERNAME, LOGIN_PASSWORD }) => {
@@ -30,7 +30,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         netflowPage.waitForLokiQuery()
     })
 
-    it("(OCP-XXXXX, memodi) should display view selector with all feature views", { tags: ['@netobserv-critical'] }, function () {
+    it("(NETOBSERV-2872, memodi) should display view selector with all feature views", { tags: ['@netobserv-critical'] }, function () {
         cy.get(viewSelectors.container).should('exist')
         cy.get(viewSelectors.dropdown).should('exist')
 
@@ -50,7 +50,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         cy.get(viewSelectors.dropdown).click()
     })
 
-    it("(OCP-XXXXX, memodi) should show feature-specific panels and columns when view is selected", function () {
+    it("(NETOBSERV-2872, memodi) should show feature-specific panels and columns when view is selected", function () {
         // ── PANELS ──
         cy.get(viewSelectors.dropdown).click()
         cy.get(viewSelectors.packetDrops).click()
@@ -126,7 +126,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         })
     })
 
-    it("(OCP-XXXXX, memodi) should persist generic column/panel changes across all views", function () {
+    it("(NETOBSERV-2872, memodi) should persist generic column/panel changes across all views", function () {
         // ── GENERIC COLUMN: add on feature view, verify propagates everywhere ──
         cy.get('#tabs-container').contains('Traffic flows').click()
         cy.byTestID("table-composable").should('exist')
@@ -263,7 +263,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         cy.byTestID(colSelectors.save).click()
     })
 
-    it("(OCP-XXXXX, memodi) should create draft and show Custom prefix when feature column/panel is modified", function () {
+    it("(NETOBSERV-2872, memodi) should create draft and show Custom prefix when feature column/panel is modified", function () {
         // ── DRAFT: deselect preset feature column on DNS view ──
         cy.get('#tabs-container').contains('Traffic flows').click()
         cy.byTestID("table-composable").should('exist')
@@ -369,7 +369,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         cy.get('#overview-flex').contains('Top 5 average DNS latencies').should('exist')
     })
 
-    it("(OCP-XXXXX, memodi) should restore defaults and clear generic prefs on any view", function () {
+    it("(NETOBSERV-2872, memodi) should restore defaults and clear generic prefs on any view", function () {
         cy.get('#tabs-container').contains('Traffic flows').click()
         netflowPage.stopAutoRefresh()
 
@@ -405,7 +405,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         })
     })
 
-    it("(OCP-XXXXX, memodi) should set correct topology metric type per view", function () {
+    it("(NETOBSERV-2872, memodi) should set correct topology metric type per view", function () {
         cy.get('#tabs-container').contains('Topology').click()
 
         // All Traffic — default metric: Bytes
@@ -453,7 +453,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         cy.byTestID("show-view-options-button").click()
     })
 
-    it("(OCP-XXXXX, memodi) generic prefs survive refresh, draft is lost on refresh", function () {
+    it("(NETOBSERV-2872, memodi) generic prefs survive refresh, draft is lost on refresh", function () {
         cy.get('#tabs-container').contains('Traffic flows').click()
         netflowPage.stopAutoRefresh()
 
@@ -499,7 +499,7 @@ describe('(OCP-XXXXX) Views selector tests', { tags: ['Network_Observability'] }
         cy.byTestID(colSelectors.save).click()
     })
 
-    it("(OCP-XXXXX, memodi) should clear draft when clicking 'Restore default columns'", function () {
+    it("(NETOBSERV-2872, memodi) should clear draft when clicking 'Restore default columns'", function () {
         cy.get('#tabs-container').contains('Traffic flows').click()
         cy.byTestID("table-composable").should('exist')
         netflowPage.stopAutoRefresh()
