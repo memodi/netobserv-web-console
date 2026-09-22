@@ -49,11 +49,12 @@ frontend:
   #  - endConnection
   features:
   # eBPF agent features
-  #  - pktDrop
-  #  - dnsTracking
-  #  - flowRTT
-  #  - multiNetworks
-  #  - packetTranslation
+   - pktDrop
+   - dnsTracking
+   - flowRTT
+   - multiNetworks
+   - udnMapping
+   - packetTranslation
   # processor features
   #  - multiCluster
   #  - zones
