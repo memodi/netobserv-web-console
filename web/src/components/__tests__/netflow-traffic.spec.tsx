@@ -78,30 +78,11 @@ describe('<NetflowTraffic />', () => {
     expect(container.querySelector('#refresh-button')).toBeTruthy();
   });
 
-  it('should load default metrics on button click', async () => {
+  it('should load only default metrics on button click even with optional features enabled', async () => {
     const { container } = render(<NetflowTrafficParent />);
     const expectedMetricsQueries: FlowQuery[] = [
       { ...defaultQuery, function: 'rate', type: 'Bytes' },
-      { ...defaultQuery, function: 'rate', type: 'Packets' },
-      { ...defaultQuery, function: 'rate', aggregateBy: 'app', type: 'Bytes' },
-      { ...defaultQuery, function: 'rate', aggregateBy: 'app', type: 'Packets' },
-      { ...defaultQuery, function: 'rate', type: 'PktDropPackets' },
-      { ...defaultQuery, function: 'rate', aggregateBy: 'app', type: 'PktDropPackets' },
-      { ...defaultQuery, function: 'avg', type: 'DnsLatencyMs' },
-      { ...defaultQuery, function: 'p90', type: 'DnsLatencyMs' },
-      { ...defaultQuery, function: 'avg', aggregateBy: 'app', type: 'DnsLatencyMs' },
-      { ...defaultQuery, function: 'p90', aggregateBy: 'app', type: 'DnsLatencyMs' },
-      { ...defaultQuery, function: 'avg', type: 'TimeFlowRttNs' },
-      { ...defaultQuery, function: 'p90', type: 'TimeFlowRttNs' },
-      { ...defaultQuery, function: 'avg', aggregateBy: 'app', type: 'TimeFlowRttNs' },
-      { ...defaultQuery, function: 'p90', aggregateBy: 'app', type: 'TimeFlowRttNs' }
-    ];
-    const expectedGenericMetricsQueries: FlowQuery[] = [
-      { ...defaultQuery, function: 'rate', type: 'PktDropPackets', aggregateBy: 'PktDropLatestState' },
-      { ...defaultQuery, function: 'rate', type: 'PktDropPackets', aggregateBy: 'PktDropLatestDropCause' },
-      { ...defaultQuery, function: 'count', type: 'DnsFlows', aggregateBy: 'DnsName' },
-      { ...defaultQuery, function: 'count', type: 'DnsFlows', aggregateBy: 'DnsFlagsResponseCode' },
-      { ...defaultQuery, function: 'count', type: 'DnsFlows', aggregateBy: 'app' }
+      { ...defaultQuery, function: 'rate', aggregateBy: 'app', type: 'Bytes' }
     ];
 
     await waitFor(() => {
@@ -112,7 +93,7 @@ describe('<NetflowTraffic />', () => {
       expectedMetricsQueries.forEach((q, i) =>
         expect(getMetricsMock).toHaveBeenNthCalledWith(i + 1, q, defaultQuery.timeRange)
       );
-      expect(getGenericMetricsMock).toHaveBeenCalledTimes(expectedGenericMetricsQueries.length);
+      expect(getGenericMetricsMock).not.toHaveBeenCalled();
     });
 
     await act(async () => {
@@ -124,7 +105,7 @@ describe('<NetflowTraffic />', () => {
       expect(getRoleMock).toHaveBeenCalledTimes(1);
       expect(getFlowsMock).toHaveBeenCalledTimes(0);
       expect(getMetricsMock).toHaveBeenCalledTimes(expectedMetricsQueries.length * 2);
-      expect(getGenericMetricsMock).toHaveBeenCalledTimes(expectedGenericMetricsQueries.length * 2);
+      expect(getGenericMetricsMock).not.toHaveBeenCalled();
     });
   });
 
