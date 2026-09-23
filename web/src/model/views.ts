@@ -85,7 +85,7 @@ const baseColumns: ColumnsId[] = [
 export const viewPresets: ViewPreset[] = [
   {
     id: 'all',
-    label: 'All Traffic'
+    label: 'Default'
     // no requiredFeature, no panels/columns override — uses localStorage defaults
   },
   {
