@@ -313,6 +313,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     caps,
     config,
     selectedViewId,
+    activeView,
     range,
     histogramRange,
     showHistogram,

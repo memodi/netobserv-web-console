@@ -5,6 +5,7 @@ import { AlertsResult, SilencedAlert } from '../../api/alert';
 import { FlowMetricsResult, GenericMetricsResult } from '../../api/query-response';
 import { getConfig, getFlowGenericMetrics, getFlowMetrics, getFlowRecords, getRole } from '../../api/routes';
 import { FlowQuery } from '../../model/flow-query';
+import { ContextSingleton } from '../../utils/context';
 import { FullConfigResultSample, SimpleConfigResultSample } from '../__tests-data__/config';
 import { extensionsMock } from '../__tests-data__/extensions';
 import { FlowsResultSample } from '../__tests-data__/flows';
@@ -118,6 +119,31 @@ describe('<NetflowTraffic />', () => {
     await waitFor(() => {
       expect(container.querySelector('#filter-toolbar')).toBeTruthy();
     });
+  });
+
+  it.each([false, true])('should refresh on preset switches with the same metric (standalone=%s)', async standalone => {
+    const standaloneSpy = jest.spyOn(ContextSingleton, 'isStandalone').mockReturnValue(standalone);
+    window.localStorage.clear();
+    getConfigMock.mockResolvedValueOnce({
+      ...FullConfigResultSample,
+      features: [...FullConfigResultSample.features, 'udnMapping', 'packetTranslation']
+    });
+
+    try {
+      const { container } = render(<NetflowTrafficParent />);
+      await waitFor(() => expect(getMetricsMock).toHaveBeenCalledTimes(2));
+
+      // All three presets use Bytes. Auto-refresh is off, so each switch must fetch immediately.
+      for (const [index, view] of ['udn', 'packetTranslation', 'all'].entries()) {
+        fireEvent.click(container.querySelector('[data-test="view-selector-dropdown"]')!);
+        fireEvent.click(document.querySelector(`#view-option-${view}`)!);
+        await waitFor(() => expect(getMetricsMock).toHaveBeenCalledTimes((index + 2) * 2));
+      }
+      expect(getMetricsMock.mock.calls.every(([query]) => query.type === 'Bytes')).toBe(true);
+    } finally {
+      standaloneSpy.mockRestore();
+      window.localStorage.clear();
+    }
   });
 
   it('should load basic metrics on button click', async () => {

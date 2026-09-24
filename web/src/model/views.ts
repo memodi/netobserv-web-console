@@ -149,7 +149,8 @@ export const viewPresets: ViewPreset[] = [
     requiredFeature: 'udnMapping',
     panels: ['top_sankey', 'top_avg_byte_rates', 'byte_rates'],
     // Src/Dst Network Name (multiNetworks) shown via this view; config default is false
-    columns: [...baseColumns, 'SrcNetworkName', 'DstNetworkName', ColumnsId.udns, ColumnsId.bytes, ColumnsId.packets]
+    columns: [...baseColumns, 'SrcNetworkName', 'DstNetworkName', ColumnsId.udns, ColumnsId.bytes, ColumnsId.packets],
+    topologyMetricType: 'Bytes'
   },
   {
     id: 'networkEvents',
@@ -168,7 +169,8 @@ export const viewPresets: ViewPreset[] = [
       ColumnsId.dropstate,
       ColumnsId.dropcause,
       'NetworkEvents'
-    ]
+    ],
+    topologyMetricType: 'Bytes'
   },
   {
     id: 'packetTranslation',
@@ -188,7 +190,8 @@ export const viewPresets: ViewPreset[] = [
       'XlatDstPort',
       'XlatDstK8S_Object',
       'XlatZoneId'
-    ]
+    ],
+    topologyMetricType: 'Bytes'
   }
 ];
 
