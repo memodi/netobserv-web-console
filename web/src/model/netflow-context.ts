@@ -17,7 +17,7 @@ export interface NetflowContextValue {
   caps: ConfigCapabilities;
   config: Config;
   k8sModels: { [key: string]: K8sModel };
-  fetchCallbacks: FetchCallbacks;
+  getFetchCallbacks: () => FetchCallbacks;
 }
 
 const defaultCaps: ConfigCapabilities = {
@@ -55,7 +55,7 @@ export const NetflowContext = React.createContext<NetflowContextValue>({
   caps: defaultCaps,
   config: defaultConfig,
   k8sModels: {},
-  fetchCallbacks: defaultFetchCallbacks
+  getFetchCallbacks: () => defaultFetchCallbacks
 });
 
 export const useNetflowContext = () => React.useContext(NetflowContext);

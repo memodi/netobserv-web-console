@@ -99,14 +99,14 @@ export interface NetflowOverviewProps {
 // eslint-disable-next-line react/display-name
 export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOverviewProps>((props, ref) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
-  const { caps, config, fetchCallbacks } = useNetflowContext();
+  const { caps, config, getFetchCallbacks } = useNetflowContext();
 
   const fetch = React.useCallback(
     (metricScope: FlowScope, range: number | TimeRange) => {
       const baseQuery = caps.flowQuery;
       const features = config.features;
       const { getMetrics } = caps.fetchFunctions;
-      const { metricsRef, setFlows, setMetrics } = fetchCallbacks;
+      const { metricsRef, setFlows, setMetrics } = getFetchCallbacks();
 
       setFlows([]);
 
@@ -563,7 +563,7 @@ export const NetflowOverview = React.forwardRef<NetflowOverviewHandle, NetflowOv
         return results;
       });
     },
-    [props.panels, caps.flowQuery, caps.fetchFunctions, config.features, fetchCallbacks]
+    [props.panels, caps.flowQuery, caps.fetchFunctions, config.features, getFetchCallbacks]
   );
 
   React.useImperativeHandle(ref, () => ({

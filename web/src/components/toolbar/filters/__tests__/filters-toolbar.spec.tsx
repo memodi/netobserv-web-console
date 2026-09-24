@@ -44,7 +44,7 @@ const testContext: NetflowContextValue = {
   caps: testCaps,
   config: defaultConfig,
   k8sModels: {},
-  fetchCallbacks: testFetchCallbacks
+  getFetchCallbacks: () => testFetchCallbacks
 };
 
 describe('<FiltersToolbar />', () => {

@@ -52,7 +52,7 @@ export interface NetflowTableProps {
 
 // eslint-disable-next-line react/display-name
 export const NetflowTable = React.forwardRef<NetflowTableHandle, NetflowTableProps>((props, ref) => {
-  const { caps, fetchCallbacks } = useNetflowContext();
+  const { caps, getFetchCallbacks } = useNetflowContext();
 
   //default to 300 to allow content to be rendered in tests
   const [containerHeight, setContainerHeight] = React.useState(300);
@@ -81,7 +81,7 @@ export const NetflowTable = React.forwardRef<NetflowTableHandle, NetflowTablePro
     ) => {
       const fq = caps.flowQuery;
       const { getRecords, getMetrics } = caps.fetchFunctions;
-      const { metricsRef, setFlows, setMetrics } = fetchCallbacks;
+      const { metricsRef, setFlows, setMetrics } = getFetchCallbacks();
 
       if (!showHistogram) {
         setMetrics(defaultNetflowMetrics);
@@ -119,7 +119,7 @@ export const NetflowTable = React.forwardRef<NetflowTableHandle, NetflowTablePro
       }
       return Promise.all(promises);
     },
-    [caps.flowQuery, caps.fetchFunctions, fetchCallbacks]
+    [caps.flowQuery, caps.fetchFunctions, getFetchCallbacks]
   );
 
   React.useImperativeHandle(ref, () => ({

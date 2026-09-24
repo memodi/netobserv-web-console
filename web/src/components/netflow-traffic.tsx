@@ -17,7 +17,7 @@ import {
   RecordType,
   StatFunction
 } from '../model/flow-query';
-import { FetchCallbacks, NetflowContext, NetflowContextValue } from '../model/netflow-context';
+import { NetflowContext, NetflowContextValue } from '../model/netflow-context';
 import { getGroupsForScope } from '../model/scope';
 import { DefaultOptions, GraphElementPeer, TopologyOptions } from '../model/topology';
 import {
@@ -295,7 +295,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
     flows,
     stats,
     metrics,
-    metricsRef,
+    getFetchCallbacks,
     lastRefresh,
     lastDuration,
     warning,
@@ -658,14 +658,9 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
 
   const isShowViewOptions = selectedViewId === 'table' ? showViewOptions && !showHistogram : showViewOptions;
 
-  const fetchCallbacks: FetchCallbacks = React.useMemo(
-    () => ({ metricsRef, setFlows, setMetrics, setError }),
-    [metricsRef, setFlows, setMetrics, setError]
-  );
-
   const contextValue: NetflowContextValue = React.useMemo(
-    () => ({ caps, config, k8sModels, fetchCallbacks }),
-    [caps, config, k8sModels, fetchCallbacks]
+    () => ({ caps, config, k8sModels, getFetchCallbacks }),
+    [caps, config, k8sModels, getFetchCallbacks]
   );
 
   return extensions && !_.isEmpty(extensions) ? (

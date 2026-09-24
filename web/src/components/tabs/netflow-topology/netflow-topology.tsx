@@ -82,7 +82,7 @@ export interface NetflowTopologyProps {
 // eslint-disable-next-line react/display-name
 export const NetflowTopology = React.forwardRef<NetflowTopologyHandle, NetflowTopologyProps>((props, ref) => {
   const { t } = useTranslation('plugin__netobserv-plugin');
-  const { caps, config, fetchCallbacks } = useNetflowContext();
+  const { caps, config, getFetchCallbacks } = useNetflowContext();
   const effectiveIsTLSTracking = props.isTLSTracking ?? caps.isTLSTracking;
 
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -126,7 +126,7 @@ export const NetflowTopology = React.forwardRef<NetflowTopologyHandle, NetflowTo
       const features = config.features;
       const { getMetrics } = caps.fetchFunctions;
       const fetchTlsGeneric = effectiveIsTLSTracking && showTLSHints(metricType);
-      const { setFlows, setMetrics, setError } = fetchCallbacks;
+      const { setFlows, setMetrics, setError } = getFetchCallbacks();
 
       setFlows([]);
 
@@ -275,7 +275,7 @@ export const NetflowTopology = React.forwardRef<NetflowTopologyHandle, NetflowTo
       caps.fetchFunctions,
       effectiveIsTLSTracking,
       config.features,
-      fetchCallbacks
+      getFetchCallbacks
     ]
   );
 

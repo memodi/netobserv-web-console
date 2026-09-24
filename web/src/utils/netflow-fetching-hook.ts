@@ -6,6 +6,7 @@ import { ViewId } from '../components/netflow-traffic';
 import { Config } from '../model/config';
 import { Filters } from '../model/filters';
 import { FlowScope, MetricType, StatFunction } from '../model/flow-query';
+import { FetchCallbacks } from '../model/netflow-context';
 import { TopologyOptions } from '../model/topology';
 import { ViewPresetId } from '../model/views';
 import { Warning } from '../model/warnings';
@@ -197,7 +198,7 @@ export interface UseDataFetchingResult {
   flows: Record[];
   stats: Stats | undefined;
   metrics: NetflowMetrics;
-  metricsRef: React.MutableRefObject<NetflowMetrics>;
+  getFetchCallbacks: () => FetchCallbacks;
   lastRefresh: Date | undefined;
   lastDuration: number | undefined;
   warning: Warning | undefined;
@@ -247,11 +248,49 @@ export function useDataFetching(params: UseDataFetchingParams): UseDataFetchingR
   const [stats, setStats] = React.useState<Stats | undefined>(undefined);
   const [metrics, setMetrics] = React.useState<NetflowMetrics>(defaultNetflowMetrics);
   const metricsRef = React.useRef(metrics);
+  const requestId = React.useRef(0);
+  const pendingRequestId = React.useRef<number>();
+  const retryTimeout = React.useRef<ReturnType<typeof setTimeout>>();
   const [lastRefresh, setLastRefresh] = React.useState<Date | undefined>(undefined);
   const [lastDuration, setLastDuration] = React.useState<number | undefined>(undefined);
   const [warning, setWarning] = React.useState<Warning | undefined>();
   const [chipsPopoverMessage, setChipsPopoverMessage] = React.useState<string | undefined>();
   const [topologyUDNIds, setTopologyUDNIds] = React.useState<string[]>([]);
+
+  const invalidateRequests = React.useCallback(() => {
+    requestId.current++;
+  }, []);
+
+  const clearRetry = React.useCallback(() => {
+    clearTimeout(retryTimeout.current);
+    retryTimeout.current = undefined;
+  }, []);
+
+  // Input changes that cannot start a fetch (e.g. opening a modal) keep the current result valid.
+  React.useEffect(() => invalidateRequests, [invalidateRequests]);
+
+  // Capture the request at fetch time, not render time: polling can fetch without a render.
+  const getFetchCallbacks = React.useCallback((): FetchCallbacks => {
+    const id = requestId.current;
+    const isCurrent = () => id === requestId.current;
+    return {
+      metricsRef,
+      setFlows: value => {
+        if (isCurrent()) setFlows(value);
+      },
+      setMetrics: value => {
+        if (isCurrent()) {
+          setMetrics(prev => {
+            if (!isCurrent()) return prev;
+            return typeof value === 'function' ? value(prev) : value;
+          });
+        }
+      },
+      setError: value => {
+        if (isCurrent()) setError(value);
+      }
+    };
+  }, []);
 
   const updateTableFilters = React.useCallback(
     (f: Filters) => {
@@ -265,14 +304,14 @@ export function useDataFetching(params: UseDataFetchingParams): UseDataFetchingR
     [setFilters]
   );
 
-  const manageWarnings = React.useCallback((query: Promise<unknown>) => {
+  const manageWarnings = React.useCallback((query: Promise<unknown>, isCurrent: () => boolean) => {
     setLastRefresh(undefined);
     setLastDuration(undefined);
     setWarning(undefined);
     Promise.race([query, new Promise((resolve, reject) => setTimeout(reject, 4000, 'slow'))]).then(
       null,
       (reason: string) => {
-        if (reason === 'slow') {
+        if (reason === 'slow' && isCurrent()) {
           setWarning({ type: 'slow', summary: 'Query is slow' });
         }
       }
@@ -297,9 +336,16 @@ export function useDataFetching(params: UseDataFetchingParams): UseDataFetchingR
     const modals = { isTRModalOpen, isOverviewModalOpen, isColModalOpen, isExportModalOpen };
     if (!canTick(initState, modals)) return;
 
+    const id = ++requestId.current;
+    pendingRequestId.current = undefined;
+    const isCurrent = () => id === requestId.current;
+    const retry = () => {
+      if (isCurrent()) tick();
+    };
+
     if (drawerRef.current == null) {
       console.debug('tick called before drawer rendering. Retrying after render');
-      setTimeout(tick);
+      retryTimeout.current = setTimeout(retry);
       return;
     }
 
@@ -318,28 +364,42 @@ export function useDataFetching(params: UseDataFetchingParams): UseDataFetchingR
       topologyMetricFunction,
       topologyOptions,
       allowLoki: caps.allowLoki,
-      setError,
-      setTopologyUDNIds,
-      setLoading,
+      setError: value => {
+        if (isCurrent()) setError(value);
+      },
+      setTopologyUDNIds: value => {
+        if (isCurrent()) setTopologyUDNIds(value);
+      },
+      setLoading: value => {
+        if (isCurrent()) setLoading(value);
+      },
       t: (key: string) => key
     });
 
     if (promises) {
+      pendingRequestId.current = id;
       const startDate = new Date();
       setStats(undefined);
       manageWarnings(
         promises
-          .then(allStats => handleQueryResult(allStats, setStats))
-          .catch(err => handleQueryError(err, filters, config.columns, chipsPopoverMessage, errorHandlers))
+          .then(allStats => {
+            if (isCurrent()) handleQueryResult(allStats, setStats);
+          })
+          .catch(err => {
+            if (isCurrent()) handleQueryError(err, filters, config.columns, chipsPopoverMessage, errorHandlers);
+          })
           .finally(() => {
+            if (pendingRequestId.current === id) pendingRequestId.current = undefined;
+            if (!isCurrent()) return;
             const endDate = new Date();
             setLoading(false);
             setLastRefresh(endDate);
             setLastDuration(endDate.getTime() - startDate.getTime());
-          })
+          }),
+        isCurrent
       );
     } else if (error) {
-      setTimeout(tick);
+      retryTimeout.current = setTimeout(retry);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -361,7 +421,12 @@ export function useDataFetching(params: UseDataFetchingParams): UseDataFetchingR
     errorHandlers
   ]);
 
-  usePoll(tick, interval);
+  const pollTick = React.useCallback(() => {
+    // Polling waits for the active query, while input changes and manual refresh can supersede it.
+    if (pendingRequestId.current === undefined) tick();
+  }, [tick]);
+
+  usePoll(pollTick, interval);
 
   // Load config and refresh when inputs change, including presets that share a metric type.
   React.useEffect(() => {
@@ -402,8 +467,10 @@ export function useDataFetching(params: UseDataFetchingParams): UseDataFetchingR
     if (!initState.current.includes('urlFiltersPending')) {
       tick();
     }
+    // Cancel retries with old inputs without invalidating a query that is still in flight.
+    return clearRetry;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, forcedFilters, config, tick, setConfig, activeView]);
+  }, [filters, forcedFilters, config, tick, setConfig, activeView, clearRetry]);
 
   return {
     loading,
@@ -411,7 +478,7 @@ export function useDataFetching(params: UseDataFetchingParams): UseDataFetchingR
     flows,
     stats,
     metrics,
-    metricsRef,
+    getFetchCallbacks,
     lastRefresh,
     lastDuration,
     warning,
