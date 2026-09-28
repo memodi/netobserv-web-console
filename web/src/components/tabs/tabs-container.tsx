@@ -1,13 +1,17 @@
-import { Button, Flex, FlexItem, Tab, Tabs, TabTitleText, Tooltip } from '@patternfly/react-core';
+import { Button, Flex, FlexItem, Tab, Tabs, TabTitleIcon, TabTitleText, Tooltip } from '@patternfly/react-core';
+import { InfoCircleIcon } from '@patternfly/react-icons';
 import React, { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNetflowContext } from '../../model/netflow-context';
+import { ViewPresetId } from '../../model/views';
 import { TimeRange } from '../../utils/datetime';
+import { getPanelFeature } from '../../utils/overview-panels';
 import { useTheme } from '../../utils/theme-hook';
 import { ViewId } from '../netflow-traffic';
 
 export interface TabsContainerProps {
   selectedViewId: ViewId;
+  activeView: ViewPresetId;
   selectView: (v: ViewId) => void;
   showHistogram: boolean;
   setShowViewOptions: (v: boolean) => void;
@@ -22,6 +26,10 @@ export const TabsContainer: React.FC<TabsContainerProps> = props => {
   const isDarkTheme = useTheme();
   const { caps } = useNetflowContext();
   const isAllowLoki = caps.allowLoki;
+  const showGenericPanelsHint =
+    props.activeView !== 'all' &&
+    caps.selectedPanels.length > 0 &&
+    caps.selectedPanels.every(panel => !getPanelFeature(panel.id));
 
   return (
     <Flex className="netflow-traffic-tabs-container" style={props.style}>
@@ -36,7 +44,25 @@ export const TabsContainer: React.FC<TabsContainerProps> = props => {
           <Tab
             className="overviewTabButton"
             eventKey={'overview'}
-            title={<TabTitleText>{t('Overview')}</TabTitleText>}
+            tooltip={
+              showGenericPanelsHint ? (
+                <Tooltip
+                  content={t(
+                    'This view shows generic overview panels. Customize your view by selecting more panels under Advanced options → Manage panels.'
+                  )}
+                />
+              ) : undefined
+            }
+            title={
+              <>
+                <TabTitleText>{t('Overview')}</TabTitleText>
+                {showGenericPanelsHint && (
+                  <TabTitleIcon>
+                    <InfoCircleIcon aria-hidden="true" />
+                  </TabTitleIcon>
+                )}
+              </>
+            }
           />
           <Tab
             className="tableTabButton"

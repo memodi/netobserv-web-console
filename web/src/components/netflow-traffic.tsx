@@ -705,6 +705,7 @@ export const NetflowTraffic: React.FC<NetflowTrafficProps> = ({
         {
           <TabsContainer
             selectedViewId={selectedViewId}
+            activeView={activeView}
             showHistogram={showHistogram}
             setShowViewOptions={setShowViewOptions}
             setShowHistogram={setShowHistogram}

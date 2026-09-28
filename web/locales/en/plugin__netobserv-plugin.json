@@ -745,6 +745,7 @@
   "Unpin this element": "Unpin this element",
   "Pin this element": "Pin this element",
   "Sorry, 3D view is not implemented anymore.": "Sorry, 3D view is not implemented anymore.",
+  "This view shows generic overview panels. Customize your view by selecting more panels under Advanced options → Manage panels.": "This view shows generic overview panels. Customize your view by selecting more panels under Advanced options → Manage panels.",
   "Traffic flows": "Traffic flows",
   "Topology": "Topology",
   "Hide histogram": "Hide histogram",
